@@ -1634,3 +1634,13 @@ Publishing the pending backup/migration implementation and documentation on the 
 codex/imap-receiver-foundation branch after a final staged privacy/whitespace review.
 Main remains unchanged. The live deployment's secrets, addresses, archives, and local
 configuration must remain ignored. Push completion is recorded after remote confirmation.
+
+## 2026-10-15 — Phase 1 publication confirmed
+
+Final staged privacy scan passed for 18 changed files, checking local credentials and
+mailbox address without displaying them. Secret/environment/archive paths remain ignored;
+staged whitespace checks passed. Published implementation and Phase 2 plan as commit
+353dd43 on origin/codex/imap-receiver-foundation. The 41-test and live restore/adoption
+results recorded above apply to this implementation; subsequent edits were documentation.
+Main was unchanged, no pull request was created, and no Phase 2 services were deployed.
+This confirmation is committed separately on the same branch.
