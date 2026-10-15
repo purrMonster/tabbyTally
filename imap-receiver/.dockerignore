@@ -1,0 +1,15 @@
+
+secrets/
+.env
+__pycache__/
+*.py[cod]
+.venv/
+*.sql
+
+backups/
+exports/
+*.eml
+*.mbox
+*.dump
+*.backup
+*.log

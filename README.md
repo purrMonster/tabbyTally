@@ -6,7 +6,7 @@ TabbyTally is a self-hosted project for turning bank transaction emails into [Ac
 
 The project starts with [n8n](https://n8n.io/) workflows and evolves incrementally into a Python application, keeping each working capability usable during the transition.
 
-> **Status: planning and initial development.** The implementation roadmap is defined. The features below describe the intended system; bank integrations, deployable services and installation commands are not yet available. TabbyTally is the working project name.
+> **Status: early development.** The [Python IMAP receiver](imap-receiver/README.md) captures new emails into PostgreSQL and has been verified with one live inbox. Fresh-install schema migrations and backup/restore tooling are pending. Extraction, review, n8n workflows, and Actual Budget writes are not implemented. The roadmap below is an earlier proposal, not a description of shipped features. Current decisions and verification are in the [runbook](imap-receiver/runbook.md). The `imap-listener/` directory is a historical JavaScript prototype.
 
 ## Why this project exists
 
