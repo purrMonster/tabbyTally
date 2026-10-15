@@ -49,10 +49,13 @@ things. Historical message counts are observations at those times, not current t
 
 ## Read this first when resuming
 
-**Most recent update, 15 October 2026:** health checks have now been implemented,
-tested, and deployed successfully. The receiver is healthy with one enabled inbox.
-See the three health-check step records at the end. Next pending operational work is
-backup and restore verification, along with the existing schema-migration gap.
+**Most recent update, 15 October 2026:** schema migrations are implemented and live
+adopted at version 1. All 41 tests passed. Before/after application-table fingerprints
+matched, repeated application made no changes, and post-adoption backup restoration
+verified the migration ledger too. Observer remains healthy with one inbox. Next:
+downstream durable jobs and n8n integration. See the dated migration records at the end.
+Earlier status statements below are historical. Off-host encrypted backups and a full
+host-loss recovery rehearsal remain pending.
 
 **Health-check work started, 15 October 2026:** user approved proceeding and requested
 runbook updates at each step. Design: a local atomic supervisor/worker heartbeat plus
@@ -1480,3 +1483,154 @@ a096073 to origin/codex/imap-receiver-foundation and configured upstream trackin
 Main was unchanged and no pull request was created. This completion record is committed
 separately on the same branch. The previously recorded 26-test result remains applicable:
 subsequent changes affected documentation, placeholder examples, and ignore rules only.
+
+## 2026-10-15 — backup and restore, step 1: implementation
+
+Added an explicit maintenance-only backup service using PostgreSQL 17 client tools and
+Python/psycopg. The observer image, runtime role, account identity, and checkpoints are
+unchanged. The service mounts only backups/ for output and has bootstrap database access;
+it has no IMAP secret, no observer startup, no automatic schedule, and no restart policy.
+
+The create command opens a repeatable-read read-only transaction, exports its snapshot,
+computes schema and table fingerprints, and passes the same snapshot to pg_dump while
+the transaction stays open. Capture may continue. Archives cover imap_receiver only;
+credentials, Docker configuration, database roles and other schemas are not covered.
+The manifest stores counts/digests, never message contents or mailbox addresses. Raw
+messages are in the archive, which is compressed but NOT encrypted. Both files stay
+in ignored backups/; callers must arrange secure off-host copies separately.
+
+Verification checks the archive hash, creates a random imap_restorecheck database from
+template0, revokes PUBLIC connect, restores without original ownership or grants, and
+compares columns/defaults/constraints/indexes and every complete row ordered by UUID.
+All mailbox checkpoint fields participate in the row fingerprint. It also recomputes
+raw-email SHA-256 against each stored hash. The temporary database is dropped in finally,
+including when restore or comparison fails. A collision is never reused or dropped.
+No arbitrary target database argument exists. Success reports are written only after
+comparison and cleanup. Cleanup errors report the generated database name for follow-up.
+
+The four current tables are the supported verifier contract. Added tests for path
+rejection, archive corruption, missing manifests, matching and mismatched restores,
+restore failure cleanup, creation collisions, and safe subprocess error messages.
+Implementation is prepared; build/test and live restore outcomes follow below.
+
+## 2026-10-15 — backup and restore, step 2: tests passed
+
+Built the maintenance image with PostgreSQL 17 client tools, Debian Python 3.11, and
+Debian psycopg 3.1.7. The receiver/admin continue using Python 3.14 and pinned psycopg
+3.3.3. Ran all tests using the admin image with database and role fixtures enabled:
+34 passed (26 existing plus eight backup tests). Also ran the eight backup tests inside
+the actual backup image; all passed. This checks the separate maintenance runtime.
+
+## 2026-10-15 — backup and restore, step 3: live verification passed
+
+At 07:41:20 UTC / 13:11:20 IST, create --verify produced a local custom-format archive
+and snapshot manifest. Counts: one account, one mailbox, four emails, zero attachments.
+Restored into a new disposable database and matched schema, full-row fingerprints,
+checkpoint fields, and raw SHA-256 values. The command reported restore_verified and
+temporary_database_removed=true, with exit zero. An independent catalog query found
+zero imap_restorecheck databases afterward. Live observer health remained healthy=true,
+mode=observing, enabled_mailboxes=1, reasons=[]. No observer restart or checkpoint reset.
+
+The live sample has no attachment rows; attachment metadata capture already has fixture
+tests, but this run does not claim a live attachment restore demonstration. Backup does
+not include secret files, roles, other schemas, or database settings. Restore verification
+omits ownership/grants and is not yet a full host-loss recovery rehearsal. Existing raw
+messages remain private in the ignored archive; no content or mailbox address was printed.
+
+Added complete README usage, consistency semantics, failure handling, trust/unencrypted
+archive limits, cleanup boundaries, and future disaster-recovery steps. Updated current
+status in root README/runbook; historical pending statements remain historical evidence.
+Added a Git ignore exception for Dockerfile.backup so the maintenance build recipe is
+versionable while actual *.backup files remain excluded. No backup artifacts are staged.
+
+## 2026-10-15 — schema migrations, step 1: baseline and runner
+
+User approved continuing to reproducible schema setup. Exported schema-only definitions
+from the working PostgreSQL 17 database (no rows or private mailbox data). Saved immutable
+migrations/001_initial.sql and a companion expected structural SHA-256. Renamed the old,
+misleading 001_initial_schema.sql account INSERT to examples/register_account.sql.
+
+Added an administrator-invoked migration runner, separate from observer startup. It
+normalizes line endings for portable checksums, requires contiguous numbered migrations,
+serializes writers with an advisory lock, and applies DDL plus history in one transaction.
+A clean database gets the baseline and schema_migrations ledger. An existing unversioned
+schema requires explicit --adopt-existing and must match the checked baseline first;
+adoption records history without replaying CREATE statements or touching business rows.
+Modified history/checksums or supported structural drift fail closed. Read-only status
+reports empty/unversioned/versioned without creating the ledger. Errors omit SQL/data.
+
+Extended backup fingerprints to include the migration ledger when present and preserve
+verification of older four-table archives. SQL files now explicitly enter the Docker
+build only from migrations/. Added disposable-database integration tests for fresh/repeat
+setup, adoption preserving rows, drift/checksum rejection, transactional rollback, and
+concurrent runner exclusion, plus line-ending portability. No live adoption performed yet.
+
+## 2026-10-15 — schema migrations, step 2: isolated tests passed
+
+All 41 tests passed with database, permission, and migration test opt-ins enabled.
+Six migration integration tests each created their own generated imap_migrationtest
+ database and cleaned it afterward. Fresh installation matched the expected baseline;
+repeat application made no changes; explicit adoption preserved complete table hashes;
+drift/history tampering failed; a failed fingerprint rolled back the entire new schema;
+and a second connection holding the advisory lock blocked concurrent application.
+Line-ending normalization was verified separately. Live adoption follows only after a
+new verified pre-adoption backup. The live observer has not been restarted.
+
+## 2026-10-15 — schema migrations, step 3: live adoption and restore verified
+
+Created and restore-verified a fresh pre-adoption archive at 07:49:22 UTC / 13:19:22 IST.
+Read-only migration status reported unversioned, zero applied, one available. Performed
+explicit baseline adoption inside an additional transaction with SHARE locks on the four
+application tables, then compared their complete fingerprints before and after. They
+matched: accounts, emails, attachments, and all mailbox checkpoint/state fields were
+unchanged. Added only schema_migrations and its version-1 adopted=true record.
+
+Repeat apply reported applied_now=0. Created and verified a post-adoption archive at
+07:49:48 UTC / 13:19:48 IST: one account, one mailbox, four emails, zero attachments,
+one migration ledger row. The restored ledger/schema/data matched, and cleanup succeeded.
+Independent checks found zero restore/migration test databases, no runtime INSERT/UPDATE/
+DELETE permission on the ledger, and healthy live observation of one inbox. No observer
+restart, account registration, checkpoint initialization, or mail sending occurred.
+
+Updated root README, receiver README, current runbook summary, and plan with migration
+commands and limitations. Documented empty installation, one-time registration example,
+explicit legacy adoption, version/checksum behavior, transactional rollback, backup
+compatibility, and test commands. Existing dated references to the old SQL filename and
+pending migrations remain historical records; the current example is now under examples/.
+
+All 41 tests passed before adoption; live repeat/adoption/backup/health checks passed
+subsequently. Next implementation boundary is downstream durable processing jobs and
+n8n integration, not another inbox. Scheduling/off-host encrypted backup copies and
+full disaster-recovery rehearsal remain open operational work. Current source changes
+remain local on codex/imap-receiver-foundation; no new push was requested or performed.
+
+## 2026-10-15 — Phase 1 completion and Phase 2 planning/publication
+
+The user confirmed the phase boundary and requested publication of current changes plus
+a detailed Phase 2 plan. Phase 1 is complete for the current one-inbox deployment:
+read-only continuous intake, durable source identity/checkpoints, restart catch-up,
+restricted runtime access, health, tested backup restoration, and schema migrations.
+The evidence remains 41 passing tests, live version-1 adoption without application-row
+changes, idempotent repeat application, successful post-adoption restore, and healthy
+observation. Multi-inbox live testing, backup scheduling/encrypted off-host copies and
+full host-loss rehearsal remain open; completion is not a claim those are done.
+
+Added docs/PHASE_2_PLAN.md with implementation steps, proposed tables and states,
+activation/catch-up semantics, lease/fencing/idempotency rules, endpoint verification,
+normalization/extraction contract, validation/FX/transfer handling, review/correction
+learning, n8n workflow decomposition, tests, privacy boundaries, and acceptance criteria.
+Phase 2 produces validated candidates and durable review state, not Actual writes.
+The later bridge is Phase 3; it does not yet exist. No Phase 2 runtime work was performed
+as part of this planning/publication request. Incoming source mail remains independent.
+
+Current n8n/PostgreSQL documentation was checked for notification and query mechanics.
+Notifications are a latency aid; persisted jobs and reconciliation supply recovery.
+Primary keys are source identities, not an update watcher or chronological cursor.
+The plan calls out private PostgreSQL routing between nodes, explicit activation selection,
+new downstream backup scope, and dedicated limited credentials. Model endpoint/version,
+n8n deployment details and representative anonymized samples are needed when integrating.
+
+Publishing the pending backup/migration implementation and documentation on the existing
+codex/imap-receiver-foundation branch after a final staged privacy/whitespace review.
+Main remains unchanged. The live deployment's secrets, addresses, archives, and local
+configuration must remain ignored. Push completion is recorded after remote confirmation.

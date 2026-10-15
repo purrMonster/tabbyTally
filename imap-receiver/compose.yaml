@@ -39,6 +39,20 @@
       timeout: 10s
       retries: 3
       start_period: 60s
+  backup:
+    profiles: ["maintenance"]
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    restart: "no"
   admin:
     profiles: ["maintenance"]
     build: .

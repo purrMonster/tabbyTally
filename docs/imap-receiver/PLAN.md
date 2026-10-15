@@ -107,3 +107,13 @@ Completion criteria:
 ## Existing verification, with limits
 
 The earlier prototype passed four checkpoint unit tests and built a Docker image. Those checks did not verify real mailbox capture, transactional failure recovery, MIME parsing, or production deployment. They must not be presented as acceptance of this redesigned service.
+
+## 15 October 2026 — current delivery update
+
+Restricted runtime role, health probes, snapshot backup/restore verification, and versioned
+schema migrations are now implemented and live verified. The full suite has 41 passing
+tests, including disposable-database migration checks. Existing live schema was adopted
+at version 1 without application-row changes; post-adoption restore includes the ledger.
+The old 001_initial_schema.sql registration example is now examples/register_account.sql.
+Current commands and limits live in the receiver README and dated runbook. Next is the
+downstream durable processing interface for n8n; keep generic intake independent of it.

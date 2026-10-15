@@ -2,11 +2,12 @@
 
 ## Development checkout status
 
-The observer is verified against an existing deployment. This is not yet a complete
-fresh-install release: versioned schema migrations and tested backup/restore tooling
-are still pending. `001_initial_schema.sql` is an example account-registration INSERT,
-despite its historical filename; it does not create the schema and is not idempotent.
-Do not rerun it against an existing configured inbox.
+The observer, snapshot backups, restore verification, and versioned schema setup are
+implemented and tested. Database installation and existing-schema adoption are described
+below. Account registration and secret provisioning remain explicit operator steps.
+`examples/register_account.sql` is a one-time account-registration example, not a
+migration; it replaces the misleading historical `001_initial_schema.sql` filename.
+Do not rerun registration against an existing configured inbox.
 
 `.env.example` documents the bootstrap variables. Copy it to a local `.env` and supply
 your own password. Compose also requires local files in `secrets/` for the IMAP and
@@ -206,8 +207,9 @@ docker compose run --rm --no-deps -e RUN_DB_TESTS=1 -e RUN_ROLE_TESTS=1 --entryp
 
 - `.env` retains PostgreSQL configuration; do not share it.
 - `secrets/` retains mounted passwords; exact bytes are preserved.
-- `001_initial_schema.sql` currently contains account-registration SQL despite its
-  filename. It was preserved as user input. Do not rerun it: it can create duplicates.
+- `migrations/001_initial.sql` contains versioned schema DDL (no account data).
+- `examples/register_account.sql` is a one-time registration example; rerunning it
+  creates duplicates. Customize only a local ignored copy with your mailbox address.
 - Planning documents: `../docs/imap-receiver/`.
 - `../imap-listener/` is an older, separate JavaScript prototype, not used by this service.
 
@@ -259,7 +261,7 @@ settings and remove PGPASSWORD_FILE from that service, then recreate only receiv
 This deliberately restores broader privileges and should be temporary. Do not delete
 the database volume or change mailbox checkpoints to troubleshoot authentication.
 
-Tested backups and reproducible schema migrations remain pending.
+Snapshot backup/restore verification and versioned schema migration commands are below.
 
 ## Health checks
 
@@ -314,3 +316,222 @@ worker_stopping, worker_retry, worker_not_scanned, worker_scan_stale, checkpoint
 mailbox_error, database_scan_stale, heartbeat_missing, observer_missing, and probe_failed.
 Output includes mailbox IDs and safe error types only, never credentials or email content.
 Investigate the receiver logs and database scan status before restarting or changing state.
+
+## Snapshot backups and restore verification
+
+Run these commands from `imap-receiver/` with PostgreSQL running:
+
+```powershell
+docker compose build backup
+docker compose run --rm --no-deps backup create --verify
+```
+
+A successful command emits `backup_created`, then `restore_verified` with
+`temporary_database_removed: true`, and exits zero. `backup_created` alone confirms
+archive creation, not a tested restore. Any failure exits nonzero. The service is
+maintenance-only, has no IMAP credentials, and never starts an observer. It uses the
+bootstrap database administrator because it must create/drop its own test database.
+Do not run `docker compose config` in shared logs: configuration may expose passwords.
+
+Files appear in the local, Git-ignored and Docker-build-excluded `backups/` directory:
+
+- `receiver_<UTC timestamp>_<random id>.dump`: compressed PostgreSQL custom archive.
+- The same basename with `.json`: archive SHA-256 and expected schema/table fingerprints.
+- The same basename with `.verified.<random id>.json`: successful comparison and cleanup.
+
+The dump contains private emails and mailbox configuration. It is **not encrypted**.
+The manifest contains counts/hashes, not email contents, but keep the files together and
+private. Container file creation uses a restrictive umask; on Windows, host filesystem
+ACLs govern access. No archive, manifest, or password file belongs in Git. Verify ignore
+rules with `git status --ignored --short`; do not force-add private files.
+
+To create without the restore rehearsal, or re-verify a particular trusted archive:
+
+```powershell
+docker compose run --rm --no-deps backup create
+docker compose run --rm --no-deps backup verify <archive-filename.dump>
+```
+
+Replace the angle-bracket placeholder with the exact basename printed by creation;
+paths and arbitrary filenames are rejected. Keep its matching `.json` alongside it.
+Only verify locally generated archives you trust: restoration executes SQL. Checksums
+help detect accidental corruption; they do not authenticate an archive against someone
+who can replace both the archive and its manifest. Re-verification creates a new report.
+
+### Snapshot and comparison guarantees
+
+The manifest and pg_dump share an exported repeatable-read snapshot. Mail capture can
+continue, and messages captured after that snapshot belong to the next backup. Do not
+run schema migrations concurrently. Schema locks have a ten-second dump wait limit;
+tool subprocesses have a 30-minute timeout. Fingerprinting streams rows, but one large
+email row still consumes memory and hashing/scans add database load. There is no overall
+job deadline or automatic retention policy; budget disk space for both archive and test
+restore, and arrange scheduling separately.
+
+The archive includes the `imap_receiver` schema. Verification supports accounts,
+mailboxes, emails, attachments, and the schema_migrations ledger when present. Older
+four-table archives remain verifiable. It compares column types/defaults/nullability,
+constraints and indexes, plus deterministic SHA-256 fingerprints of every full row.
+That includes account configuration, IDs, checkpoint/UIDVALIDITY fields, scan timestamps,
+raw and parsed mail, and attachment metadata. It independently recomputes the raw-email
+hashes. Oversized metadata-only messages have no raw payload to check. The receiver
+stores attachment metadata and original MIME mail, not separate attachment binary files.
+Future schema changes must extend this verifier before claiming coverage for new objects.
+
+A new randomly named `imap_restorecheck_<id>` database is created from template0, with
+PUBLIC connect revoked. Restoration uses one transaction, without original owners or
+ACLs. It never uses `--create`/`--clean` or a caller-specified restore target. The generated
+database is dropped after success or failure; existing-name collisions fail without
+cleanup of that existing database. No test IMAP connection is made. A success report
+requires comparison **and** database removal. Ownership, grants, functions, triggers,
+sequences, extensions, database settings, and outside-schema dependencies are not part
+of the current structural comparison contract; restore errors still fail verification.
+
+### Failures and recovery boundaries
+
+A missing manifest, changed archive checksum, unsupported table layout, raw-hash mismatch,
+restore failure, or data/schema mismatch fails the operation. Error output contains safe
+exception classes, not SQL or email content. PostgreSQL tool stderr is deliberately not
+printed; warnings also fail the operation. Investigate privately rather than enabling
+verbose logging of sensitive source data in a shared session.
+
+An interrupted creation can leave `.dump.partial` or a dump without a manifest. These
+are incomplete and cannot be verified; preserve them for investigation or remove only
+the exact known incomplete files. Do not delete the last verified backup. On ordinary
+restore failures cleanup runs; a killed process, host crash, or lost database connection
+can leave its generated test database. `restore_cleanup_failed` includes the safe test
+database name when cleanup itself fails. Inspect for leftovers with:
+
+```powershell
+docker compose exec -T postgres psql -U imap_receiver -d imap_receiver -c "SELECT datname FROM pg_database WHERE datname LIKE 'imap_restorecheck_%';"
+```
+
+These example user/database names match the local setup; adjust for your deployment.
+Before removing any leftover, confirm the exact name belongs to an interrupted verification
+and no active verifier is using it. Never use wildcard deletion or remove the live database.
+The verifier shares the existing cluster, so this rehearsal does not test recovery after
+loss of the Docker host, PostgreSQL installation, or administrator credentials.
+
+The archive excludes other schemas, database-role definitions/passwords, `.env`, mounted
+secret files, Compose configuration, and database-wide settings. Preserve required
+configuration and secrets separately in secure storage. A full recovery should restore
+into a new isolated deployment, provision the runtime role/grants with the existing
+administrator tool, verify data, and check credentials/configuration before starting one
+observer. Do not reinitialize restored checkpoints: that could skip mail after the backup.
+Do not connect a second observer to the same inbox as part of a restore rehearsal.
+
+Full disaster recovery, off-host encrypted copies, backup frequency, retention, and
+recovery-time objectives remain to be agreed and tested. A local verified archive alone
+will not survive loss of this host. Schema migrations are documented below;
+no destructive live-restore command is provided here.
+
+Implementation reference: PostgreSQL 17 [pg_dump](https://www.postgresql.org/docs/17/app-pgdump.html)
+and [pg_restore](https://www.postgresql.org/docs/17/app-pgrestore.html).
+
+## Versioned schema installation and upgrades
+
+Run migration commands explicitly through the administrator service. The observer never
+runs DDL. Build updated images before applying migrations; a container built from older
+source cannot see newly added migration files. Required local `.env` and runtime-secret
+files must already exist (see the credential section). Start PostgreSQL only first:
+
+```powershell
+docker compose up -d --wait postgres
+docker compose build admin backup receiver
+docker compose run --rm --no-deps --entrypoint python admin -m src.migrate status
+```
+
+For a fresh database, status reports `empty`. Install its schema with:
+
+```powershell
+docker compose run --rm --no-deps --entrypoint python admin -m src.migrate apply
+docker compose run --rm --no-deps admin
+```
+
+The first command installs the baseline and migration ledger; the second provisions the
+restricted runtime role using the already configured secret. The schema migration creates
+no mailbox/account rows, initializes no checkpoint, and has no IMAP connection. On a fresh
+installation, register your account separately using an ignored local copy of
+`examples/register_account.sql`, initially disabled. Replace its placeholder mailbox
+address privately. It is a one-time INSERT, not idempotent configuration synchronization.
+Do not copy credentials into tracked SQL. The schema contains no IMAP password column.
+
+For example, after preparing `exports/register_account.local.sql` with the intended
+mailbox address, run it once through the existing database service (adjust database/user
+names if yours differ):
+
+```powershell
+Get-Content -Raw .\exports\register_account.local.sql | docker compose exec -T postgres psql -U imap_receiver -d imap_receiver -v ON_ERROR_STOP=1
+```
+
+Follow the existing check-db, check-imap, and init-mailbox instructions before enabling
+that registered account. Initialization establishes the new-mail cutoff, so choose its
+timing deliberately. For the default single banking account, enabling is an explicit
+administrator SQL update to `accounts.enabled`; the mailbox defaults to enabled. Start
+the observer only after that configuration is ready. Do not re-register or reinitialize
+an already working inbox during an upgrade.
+
+### Existing databases and baseline adoption
+
+Before applying changes, create and verify a backup. If status reports `unversioned`,
+the database matches the legacy schema but has no migration ledger. Adopt it explicitly:
+
+```powershell
+docker compose run --rm --no-deps backup create --verify
+docker compose run --rm --no-deps --entrypoint python admin -m src.migrate apply --adopt-existing
+docker compose run --rm --no-deps --entrypoint python admin -m src.migrate apply
+docker compose run --rm --no-deps backup create --verify
+```
+
+Adoption verifies the baseline then adds one history row; it does not recreate existing
+tables or touch accounts, mail, attachments, or checkpoints. The repeat apply must report
+`applied_now: 0`. This local deployment is already adopted at version 1. The live adoption
+was additionally wrapped in short-lived SHARE locks and complete before/after fingerprints
+of the four application tables, proving those rows remained identical within the operation.
+The standard runner itself does not acquire these extra application-table locks.
+
+Subsequent upgrades use `apply` after reviewing and testing new migrations. Do not run
+migrations concurrently with backups or manual schema edits. Plan observer downtime if a
+future migration changes tables used by capture; this first adoption needed no restart.
+There is no automatic downgrade, destructive reset, or repair-by-overwrite command.
+A failure rolls back the transaction, including newly created schema/history. If drift
+or history mismatch is reported, investigate privately; do not delete history or edit
+old checksums to bypass validation.
+
+### Migration contract and test scope
+
+Files are contiguous `NNN_name.sql` plus matching `.json` metadata specifying the expected
+application-schema fingerprint. The ledger records version ID, filename, SHA-256, applied
+time, and whether the baseline was adopted. The checksum covers normalized SQL and the
+expected fingerprint, so Windows CRLF versus Linux LF does not change it. Applied files
+are immutable: add a new migration instead of editing an existing one. SQL must be
+transaction-safe and must not contain BEGIN/COMMIT, psql commands, or role provisioning.
+The baseline targets PostgreSQL 17 and uses its built-in UUID generation.
+
+A transaction-scoped advisory lock serializes migration commands. Lock timeout is five
+seconds and SQL statement timeout is 60 seconds. Status does not create objects. It checks
+history and supported schema structure, and currently performs the same full-row/raw-hash
+scan as backup fingerprinting. On large mailboxes this has cost and may hit the statement
+timeout; do not treat it as a lightweight health probe. Health checks remain separate.
+
+Current drift validation covers application table columns/defaults, constraints and indexes;
+it is not a general audit of grants, functions, triggers, or all PostgreSQL objects. The
+ledger is protected by administrator ownership and has no runtime write grants. Its own
+structure is included in backup verification, while migration application-schema fingerprints
+exclude it. Future table additions require extending the backup/verifier contract as well
+as adding the migration. Review schema fingerprints against a disposable database, never
+by copying an arbitrary drifted live database's hash to make an error disappear.
+
+Run the full suite, including tests that create and remove isolated databases:
+
+```powershell
+docker compose run --rm --no-deps -e RUN_DB_TESTS=1 -e RUN_ROLE_TESTS=1 -e RUN_MIGRATION_TESTS=1 --entrypoint python admin -m unittest discover -s tests -v
+```
+
+The migration tests use generated `imap_migrationtest_<id>` databases only, and never
+point a receiver at them. The fresh baseline, repeat run, explicit adoption/data preservation,
+drift and history rejection, rollback, concurrent-runner exclusion, and line-ending
+portability are verified. Cleanup runs on normal failures; killed processes may leave a
+test database requiring the same careful exact-name inspection as restore leftovers.
+The verified live state has one account, one mailbox, four emails and one migration row.
+A complete host-loss recovery rehearsal and automatic account onboarding are separate work.

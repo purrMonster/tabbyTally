@@ -1,3 +1,5 @@
+-- Example only: customize the address locally before executing once.
+-- Schema installation is handled by python -m src.migrate apply.
 BEGIN;
 
 WITH new_account AS (

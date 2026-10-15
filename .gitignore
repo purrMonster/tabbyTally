@@ -15,6 +15,7 @@ exports/
 *.mbox
 *.dump
 *.backup
+!Dockerfile.backup
 *.sql.gz
 *.log
 

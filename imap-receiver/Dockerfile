@@ -7,6 +7,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt && useradd --create-home receiver
 
 COPY src ./src
+COPY migrations ./migrations
 
 COPY tests ./tests
 USER receiver

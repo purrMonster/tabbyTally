@@ -5,6 +5,7 @@ __pycache__/
 *.py[cod]
 .venv/
 *.sql
+!migrations/*.sql
 
 backups/
 exports/
