@@ -1470,3 +1470,13 @@ main is not being merged or modified. Before pushing, check the final staged con
 against local credential/address values without printing them, verify excluded paths
 are absent from the index, and run git diff --cached --check. Backup/restore and fresh
 schema migrations remain pending work after this development snapshot.
+
+## 2026-10-15 — GitHub publication completed
+
+Final staged privacy scan passed across 39 files, including comparison against local
+passwords and the mailbox address without printing values. Git confirmed .env and both
+actual password files are ignored. Staged whitespace checks passed. Published commit
+a096073 to origin/codex/imap-receiver-foundation and configured upstream tracking.
+Main was unchanged and no pull request was created. This completion record is committed
+separately on the same branch. The previously recorded 26-test result remains applicable:
+subsequent changes affected documentation, placeholder examples, and ignore rules only.
