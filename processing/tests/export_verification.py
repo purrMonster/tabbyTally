@@ -8,6 +8,7 @@ from corpus_inventory import read
 from tabby_processing import normalize, templates, accounts, validation, correlation
 from collections import Counter
 from score_benchmark import equivalent
+from tabby_processing.parties import describe
 
 
 def main():
@@ -28,7 +29,7 @@ def main():
         rows.append(dict(id=row['id'],filename=path.name,subject=row['source']['subject'],
             email_body=row['preview'].partition('\n\n')[2],
             expected_classification=gold[row['id']]['classification'],
-            model_fields=[{k:e.get(k) for k in ('transaction_amount','transaction_date','bank','event_type')} for e in events],
+            model_fields=[{**{k:e.get(k) for k in ('transaction_amount','transaction_date','bank','event_type','merchant')},**describe(e)} for e in events],
             model_output=saved.get('facts'),invalid_raw_output=saved.get('raw_output'),
             model_status=saved.get('status','not_run'),model_metadata=saved.get('metadata'),
             model_input_matches_current=saved.get('input_sha256')==hashlib.sha256(n.text.encode()).hexdigest(),
@@ -41,6 +42,7 @@ def main():
     for r in rows:
         if not r['template_output']: continue
         e=r['validation'][0]['effective_facts']; differences=[]
+        r['parties']=describe(e)
         for k,want in gold[r['id']].get('fields',{}).items():
             got=e['transaction_amount'].get(k) if k in ('amount','currency') else e.get(k)
             fields[k]+=1
@@ -67,6 +69,7 @@ def main():
           +esc(json.dumps(r['model_output'],ensure_ascii=False,indent=2) if r['model_output'] is not None else r['invalid_raw_output'] or 'No model JSON available: '+r['model_status'])
           +'</pre><h3>Model provenance</h3><pre>'+esc(json.dumps(r['model_metadata'],indent=2))
           +'</pre><h3>Current deterministic output (separate)</h3><pre>'+esc(json.dumps(r['template_output'],ensure_ascii=False,indent=2))
+          +'</pre><h3>Recipient / sender (direction-aware)</h3><pre>'+esc(json.dumps(r.get('parties',describe(None)),ensure_ascii=False,indent=2))
           +'</pre><h3>Validation with confirmed mappings</h3><pre>'+esc(json.dumps(r['validation'],indent=2))
           +'</pre><h3>Possible related emails (review required)</h3><pre>'+esc(json.dumps(r.get('relationships',[]),indent=2))+'</pre></details>')
     (out/'output-map.html').write_text('<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>Private email verification</title><style>body{font:16px system-ui;max-width:1100px;margin:30px auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f5f5;padding:16px}details{border-bottom:1px solid #ccc;padding:12px}summary{cursor:pointer}</style><h1>Private email verification — 264-email corpus</h1><p>Saved baseline model outputs, not a new model run. Valid JSON is reserialized from saved parsed output; original response whitespace was not retained. Missing/refused outputs are explicit. Deterministic results are shown separately. Bodies are visible text, without active HTML or attachments.</p>'+''.join(blocks),encoding='utf-8')

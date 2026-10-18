@@ -1692,3 +1692,30 @@ now explicitly labelled unverified. User-checked extraction agreement is not mea
 reviewed. Earlier runbook accuracy-like figures are agreement with assistant-created
 expectations unless explicitly identified as user-reviewed. This section corrects
 their interpretation without rewriting historical outputs or claiming new accuracy.
+
+## 24. Recipient/payee review requirement — 18 October 2026
+
+User feedback: the existing samples look good, but RECIPIENT was missing from the
+summary and is important to track where transactions go and how much. Record this
+as approval of the previously displayed sample fields, not of recipient values
+which were not yet displayed. Preserve the existing sample selection and responses.
+
+Decision: expose the existing `merchant` counterparty field beside amount in both
+reports, with a direction-aware recipient/sender projection. For debits, the
+merchant/payee is the recipient; for credits, it is the sender and the credited
+account is the recipient. An RTGS beneficiary identified only by a masked suffix
+is displayed as that beneficiary account, not as the source account. Unknown names
+remain unspecified. The projection records its basis and preserves the raw merchant
+field and original saved model JSON. It does not merge merchant aliases or invent
+recipient identities, and it requires no new model run or schema migration.
+
+Done when: all 25 rows show recipient/payee; incoming messages distinguish sender
+from recipient; the full report includes these fields next to amount; direction and
+beneficiary handling tests pass; documentation and code are committed.
+
+Verification: both recipient-direction regression tests passed. Regenerated all
+264 report entries and the same 25-row sample. The private response record now
+captures the user's positive feedback on all 25 previously displayed rows, scoped
+to those fields; recipient/sender/merchant are explicitly not yet user-verified.
+Sample metrics report 25 checked/25 agreed for that prior scope, independently of
+generated-label comparisons. No recipient accuracy claim follows from prior feedback.
