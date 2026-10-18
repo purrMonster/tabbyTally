@@ -32,6 +32,8 @@ things. Historical message counts are observations at those times, not current t
 
 ### Quick links
 
+- [Current Python processing runbook](../docs/processing/RUNBOOK.md)
+- [Phase 2.1 implementation and verification addendum](#2026-10-15--phase-21-python-processing-implementation-and-verification)
 - [Current-state handoff](#read-this-first-when-resuming)
 - [Chronological workflow discussion](#2026-10-15--original-workflow-discussion)
 - [Operating commands](#operating-commands)
@@ -48,6 +50,29 @@ things. Historical message counts are observations at those times, not current t
 - [Session continuity checklist](#k-session-continuity-checklist)
 
 ## Read this first when resuming
+
+**Current handoff, 15 October 2026 — supersedes earlier next-step statements:** the user
+selected Python instead of n8n for downstream processing and named the phase **Phase 2 —
+Python ingest**. Phase 2.1 is implemented under project-root `processing/`: durable jobs,
+explicit activation, leases, attempts, retries, crash recovery, fake processing, operator
+commands and combined backup support. Twenty isolated PostgreSQL processing tests and all
+41 receiver regression tests passed; the processing image and CLI smoke test passed.
+No live processing deployment, migration, activation or inbox change was performed.
+
+Use the [detailed processing runbook](../docs/processing/RUNBOOK.md) for decisions, steps
+taken, schema/roles, test commands, deployment prerequisites, backup/restore, troubleshooting
+and evidence limits. Extraction/financial validation is 2.2, review/callbacks 2.3,
+integrated acceptance/rollout 2.4, and Actual writes Phase 3. n8n setup is no longer the
+next prerequisite. Live receiver state has not been rechecked in this documentation pass.
+
+Backup now supports `create --include-processing --verify` for both schemas. **The flag
+is required:** existing receiver-only commands remain valid but omit processing state.
+No backup schedule or live maintenance image was changed by the Phase 2.1 implementation.
+Off-host encrypted copies and full host-loss recovery remain pending.
+
+The handoffs below preserve earlier status. Their “next”, “latest”, “not implemented”
+and n8n statements describe the state at the time, not current processing status.
+Earlier live Phase 1 observations remain evidence for those runs only.
 
 **Most recent update, 15 October 2026:** schema migrations are implemented and live
 adopted at version 1. All 41 tests passed. Before/after application-table fingerprints
@@ -84,7 +109,8 @@ implemented. Do not claim the budgeting pipeline is operational.
 
 ## Workspace and artifact map
 
-Project: `C:\Projects\tabbyTally`
+Current workspace for Phase 2.1: `C:\Users\jyotirmoyc\Desktop\Projects\tabbyTally`.
+Earlier receiver work recorded `C:\Projects\tabbyTally`; that is historical context.
 
 | Path | Purpose / status |
 |---|---|
@@ -99,6 +125,10 @@ Project: `C:\Projects\tabbyTally`
 | `docs/imap-receiver/PLAN.md` | Build stages and progress |
 | `imap-listener/` | Earlier JavaScript/webhook prototype; unused by current service, preserved |
 | Root `README.md` | Broader original roadmap; may still mention earlier choices such as Ollama |
+| `processing/` | Implemented Phase 2.1 Python job service, fake processor, CLI and isolated tests |
+| `docs/processing/RUNBOOK.md` | Detailed processing operating procedures and implementation record |
+| `docs/processing/VERIFICATION.md` | Test ledger and deployment limits |
+| `imap-receiver/src/processing_backup.py` | Combined-backup processing verifier; receiver fingerprint unchanged |
 
 Planning documents were initially created inside imap-receiver; they were subsequently
 found under docs/imap-receiver. Use their current locations. Some planning text may
@@ -1644,3 +1674,93 @@ staged whitespace checks passed. Published implementation and Phase 2 plan as co
 results recorded above apply to this implementation; subsequent edits were documentation.
 Main was unchanged, no pull request was created, and no Phase 2 services were deployed.
 This confirmation is committed separately on the same branch.
+
+## 2026-10-15 — Phase 2.1 Python processing implementation and verification
+
+This addendum records work after the Phase 1 publication above. It does not imply that
+Phase 2.1 changes were committed or pushed. No publication was performed for this work.
+
+### Decisions and plan
+
+The user asked about replacing n8n with Python, requested a complete Python plan, and
+authorized Phase 2.1 implementation. Python was selected for direct transaction control,
+job ownership/recovery, deterministic validation and regression testing. PostgreSQL remains
+authoritative; no Redis, Celery or n8n workflow dependency was introduced. The receiver
+stays independent, with no downstream triggers/model calls in its capture transaction.
+
+The user named the phase **Python ingest**: 2.1 is the durable fake-processor foundation;
+2.2 adds local extraction and validation; 2.3 adds review/corrections/callbacks; 2.4 performs
+integrated acceptance and gradual rollout. Actual Budget writes stay in Phase 3.
+Ingest here consumes captured database rows and does not replace IMAP or import history.
+
+Plans live in `docs/processing/`; `docs/PHASE_2_PLAN.md` is now an entry point. Planning
+initially reserved `processing-node/`, but the user's implementation instruction selected
+`processing/`. The code and documentation links use that final path; the empty old folder
+was removed. The detailed plan maps earlier M0–M7 milestones to the new phase structure.
+
+### Implementation and backup changes
+
+Added a Python package/container, nine-table `processing` schema, checked migrations,
+runtime compatibility checks and restricted runtime/operator/inspector group roles.
+Explicit activation records committed mailbox UIDVALIDITY/last UID or selected sample IDs.
+Repeated reconciliation creates one job per email/version and catches late commits.
+Generation mismatches are reported/excluded, never repaired by resetting capture state.
+
+Claims carry expiring random tokens and durable attempt numbers. Completion, heartbeat
+and failure validate current ownership in transactions. Results and completion commit
+together. Expired attempts are abandoned and retried with jitter or exhausted into dead
+state. Operator retry adds bounded allowance without erasing history; pause/resume and
+inspection commands are available. Restore-lease invalidation requires an explicit
+assertion that old workers were fenced and records an audit event.
+
+Fake results are synthetic only. No model, mapping, financial candidate, review, callback
+or notification storage was introduced. Runtime source permissions allow identity/status/
+hash metadata and checkpoint reads, without email bodies, raw MIME or credentials.
+The worker has no receiver write permissions or Actual credentials.
+
+Extended receiver backup with `--include-processing`, manifest version 2, a shared snapshot
+and a separate processing verifier. Preserved the receiver fingerprint used by migration
+checks and version-1 archive support. Combined verification checks the processing layout,
+all rows and references alongside source integrity. Roles/secrets/configuration require
+separate recovery. Existing backup commands still omit processing unless given the flag.
+
+### Tooling, checks and cleanup
+
+Host Python resolved to an unusable WindowsApps launcher. Docker daemon access initially
+failed in the sandbox and then succeeded through approved Docker execution. All checks
+used isolated Docker resources. The initial test-image build used Debian Python 3.11 and
+failed the package's >=3.12 requirement. It was corrected to combine Python 3.14 with
+PostgreSQL 17 tools; subsequent image builds and tests passed.
+
+Processing test coverage grew from 11 to 17 to 20 passing integration tests. All 41 receiver
+tests passed with database, role and migration opt-ins. Tests covered concurrent scans/
+claims/recovery, late commits, stale tokens, killed subprocesses and interrupted saves,
+retry exhaustion/operator actions, connection loss, permissions, combined restores,
+archive corruption and synthetic capture/unread preservation. Production image build,
+CLI help, placeholder Compose validation, document links and whitespace checks passed.
+Disposable test containers and network were removed; built images remained available.
+
+Limits: lost-ack testing reconnects after commit rather than injecting packet loss;
+database-outage testing terminates a connection rather than rebooting a host; capture
+uses synthetic IMAP. The updated backup code ran with Python 3.14 in the test image;
+the distinct receiver maintenance image must be rebuilt/rechecked before live rollout.
+The role tests use SET ROLE, not production login credentials or remote TLS.
+
+### Operations and handoff
+
+The user requested test instructions; provided isolated processing/receiver commands
+with expected counts of 20 and 41 plus test-stack cleanup. The subsequent detailed
+[processing runbook](../docs/processing/RUNBOOK.md) records all decisions, code semantics,
+schema/roles/defaults, commands, deployment order, backup/restore, troubleshooting and
+known limits. That documentation pass did not rerun tests or change services.
+
+Before live activation, confirm placement/private database connectivity, provision login
+secrets and verify effective permissions, rebuild maintenance backup support, verify a
+combined archive and update scheduling. Choose an explicit activation scope. No live
+processing login, database port, production boundary or off-host schedule was created.
+Health proves database/schema readiness, not ongoing worker progress. Live receiver
+state was not rechecked during this phase.
+
+Next feature work is 2.2, requiring verified local-model API details and anonymized
+representative samples. Preserve the one-inbox scope and financial handling decisions;
+there is no need to resume the earlier n8n integration sequence.

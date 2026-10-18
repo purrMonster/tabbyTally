@@ -1,0 +1,13 @@
+.git
+**/.env
+**/.env.*
+**/model.env
+**/.review.env
+**/secrets
+**/backups
+**/exports
+**/.venv
+**/__pycache__
+**/*.eml
+**/*.dump
+**/*.log

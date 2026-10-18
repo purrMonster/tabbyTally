@@ -1,0 +1,17 @@
+# Optional overlay for a verified OpenAI-compatible model endpoint.
+services:
+  worker:
+    command: [work, --loop, --deadline, '1200', --lease-seconds, '1320']
+    stop_grace_period: 1230s
+    env_file:
+      - .env
+      - model.env
+    secrets:
+      - processing_db_password
+      - model_username
+      - model_password
+secrets:
+  model_username:
+    file: ./secrets/model_username.txt
+  model_password:
+    file: ./secrets/model_password.txt

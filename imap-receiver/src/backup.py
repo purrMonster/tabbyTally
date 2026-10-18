@@ -113,7 +113,12 @@ def fingerprint(db, include_migrations=True):
     return result
 
 
-def create_backup():
+def combined_fingerprint(db):
+    from .processing_backup import fingerprint as processing_fingerprint
+    return {'receiver': fingerprint(db), 'processing': processing_fingerprint(db)}
+
+
+def create_backup(include_processing=False):
     ROOT.mkdir(parents=True, exist_ok=True)
     name = 'receiver_' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ_') + uuid.uuid4().hex + '.dump'
     destination = archive_path(name)
@@ -124,18 +129,19 @@ def create_backup():
     with connect() as db, db.transaction():
         db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
         snapshot = db.execute('SELECT pg_export_snapshot() AS snapshot').fetchone()['snapshot']
-        expected = fingerprint(db)
-        run_pg(['pg_dump', '--format=custom', '--schema=imap_receiver', '--strict-names',
+        expected = combined_fingerprint(db) if include_processing else fingerprint(db)
+        schemas = ['--schema=processing'] if include_processing else []
+        run_pg(['pg_dump', '--format=custom', '--schema=imap_receiver', *schemas, '--strict-names',
                 '--no-password', '--lock-wait-timeout=10s', '--snapshot=' + snapshot,
                 '--file=' + str(partial)])
     digest = digest_file(partial)
     partial.rename(destination)
     write_json(destination.with_suffix('.json'), {
-        'format_version': 1, 'created_at': now(), 'archive': name,
-        'archive_sha256': digest, 'scope': 'imap_receiver schema', 'fingerprint': expected,
+        'format_version': 2 if include_processing else 1, 'created_at': now(), 'archive': name,
+        'archive_sha256': digest, 'scope': 'imap_receiver + processing' if include_processing else 'imap_receiver schema', 'fingerprint': expected,
     })
     print(json.dumps({'event': 'backup_created', 'archive': name,
-                      'tables': {key: value['rows'] for key, value in expected['tables'].items()}}))
+                      'scope': 'combined' if include_processing else 'receiver'}))
     return name
 
 
@@ -145,8 +151,9 @@ def verify_backup(name):
     if manifest_path.is_symlink():
         raise ValueError('Manifest cannot be a symlink')
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-    if (manifest.get('format_version') != 1 or manifest.get('archive') != name
-            or manifest.get('scope') != 'imap_receiver schema'
+    valid_scope = (manifest.get('format_version'), manifest.get('scope')) in (
+        (1, 'imap_receiver schema'), (2, 'imap_receiver + processing'))
+    if (not valid_scope or manifest.get('archive') != name
             or manifest.get('archive_sha256') != digest_file(archive)):
         raise ValueError('Archive integrity or manifest validation failed')
     target = 'imap_restorecheck_' + uuid.uuid4().hex
@@ -165,7 +172,7 @@ def verify_backup(name):
                     '--no-owner', '--no-privileges', '--dbname=' + target, str(archive)])
             with connect(dbname=target) as restored, restored.transaction():
                 restored.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
-                actual = fingerprint(restored)
+                actual = combined_fingerprint(restored) if manifest['format_version'] == 2 else fingerprint(restored)
             if actual != manifest['fingerprint']:
                 raise ValueError('Restored schema or row fingerprint differs from snapshot')
             matched = True
@@ -192,13 +199,14 @@ def main():
     commands = parser.add_subparsers(dest='command', required=True)
     create = commands.add_parser('create', help='Create a consistent receiver-schema archive')
     create.add_argument('--verify', action='store_true', help='Also restore and verify the new archive')
+    create.add_argument('--include-processing', action='store_true', help='Archive both schemas consistently; required for Phase 2')
     verify = commands.add_parser('verify', help='Verify a trusted local archive in a new disposable database')
     verify.add_argument('archive', help='Archive basename only, inside /backups')
     args = parser.parse_args()
     os.umask(0o077)
     try:
         if args.command == 'create':
-            name = create_backup()
+            name = create_backup(include_processing=args.include_processing)
             if args.verify:
                 verify_backup(name)
         else:

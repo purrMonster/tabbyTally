@@ -3,6 +3,8 @@
 .env.*
 !.env.example
 secrets/
+model.env
+.review.env
 compose.override.yaml
 compose.override.yml
 *.pem

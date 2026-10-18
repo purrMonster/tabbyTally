@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=77,<83"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tabby-processing"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["psycopg[binary]==3.3.3"]
+
+[project.scripts]
+tabby-processing = "tabby_processing.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+tabby_processing = ["migrations/*.sql"]
