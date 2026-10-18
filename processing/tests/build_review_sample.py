@@ -49,6 +49,8 @@ def build(directory):
         labels.append({'row':i,'source_id':row['id'],'label_status':LABEL_STATUS,
                        'user_checked':False,'user_agrees':None,'corrections':None})
         status='User checked previously displayed fields; recipient/sender awaiting verification' if confirmations.get(row['id'],{}).get('user_checked') else LABEL_STATUS
+        if confirmations.get(row['id'],{}).get('recipient_verified'):
+            status='User checked displayed fields, including recipient/sender'
         blocks.append(f'<section><h2>Row {i}: {esc(row["subject"])}</h2><p>{esc(row["template_rule"] or "model / input review")} · {status}</p>'
             +'<div class="pair"><div><h3>Source email</h3><pre>'+esc(row['email_body'] or '[No readable body]')+'</pre></div>'
             +'<div><h3>Current extracted fields</h3><pre>'+esc(json.dumps(fields,ensure_ascii=False,indent=2))+'</pre>'
@@ -72,12 +74,13 @@ def build(directory):
             raise ValueError('Sample changed; preserve existing responses and choose a new report directory')
         metrics['agreement_with_user_checked_labels']={'checked':sum(r.get('user_checked') is True for r in previous),
             'agreed':sum(r.get('user_checked') is True and r.get('user_agrees') is True for r in previous),
-            'scope':'previously displayed sample fields only; recipient/sender not yet verified'}
+            'recipient_checked':sum(r.get('recipient_verified') is True for r in previous),
+            'scope':'displayed sample fields; recipient approval counted separately'}
         (directory/'review-sample-metrics.json').write_text(json.dumps(metrics,indent=2),encoding='utf-8')
     page='<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\';style-src \'unsafe-inline\'"><title>25-email review sample</title><style>body{font:16px system-ui;max-width:1450px;margin:24px auto;padding:12px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:24px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f5f5;padding:12px}section{border-top:2px solid #ddd;margin-top:32px}h2{font-size:20px}@media(max-width:800px){.pair{grid-template-columns:1fr}}</style><h1>25-email review sample</h1><p>Review the source beside the current extracted fields. Saved model output is separate. Generated expectations are <b>unverified (model-generated)</b>. This sample is deliberately diverse, not a random estimate of inbox accuracy.</p><p>Format coverage: '+str(template_matches)+'/'+str(len(rows))+' total emails. Agreement with generated labels is reported separately in validation-summary.json. User-checked agreement: not measured. Confirm rows in chat by number; specify any corrected fields. Your existing account/policy confirmations are preserved but do not count as checking these extraction rows.</p>'+''.join(blocks)
     if any(r.get('user_checked') for r in previous):
         page=page.replace('User-checked agreement: not measured.',
-            'User feedback: previously displayed samples look good. Recipient/sender are newly added and await verification.')
+            'User feedback: displayed sample fields approved. Recipient/sender checked in '+str(sum(r.get('recipient_verified') is True for r in previous))+' of '+str(len(previous))+' sample rows.')
     (directory/'review-sample.html').write_text(page,encoding='utf-8')
     return metrics
 

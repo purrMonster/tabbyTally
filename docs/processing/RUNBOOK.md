@@ -1719,3 +1719,22 @@ captures the user's positive feedback on all 25 previously displayed rows, scope
 to those fields; recipient/sender/merchant are explicitly not yet user-verified.
 Sample metrics report 25 checked/25 agreed for that prior scope, independently of
 generated-label comparisons. No recipient accuracy claim follows from prior feedback.
+
+## 25. Recipient approval and next integration item — 18 October 2026
+
+The user confirmed the refreshed recipient review sheet with “Looks good. Next
+step.” Record all 25 displayed sample rows, including recipient/sender, as checked
+and agreed. This approval is scoped to the displayed current extraction results;
+it does not certify every historical model output or all 264 emails. Updated the
+private response records, sample badges and metrics: 25 checked, 25 agreed,
+25 recipient checks. Generated-label comparisons remain separately identified.
+Verified regeneration reports those counts and no longer asks for recipient checks.
+
+Next work item: meowGram notification send/action integration. Read-only Git branch
+inspection found existing `feat/r2-epic-2.4-message-api` and `release/r2` workstreams,
+while the checkout is on `feat/ust-2.3.2-bot-auth`. The inspected message-API branch
+does not yet register a bot POST message route or document its request contract.
+Use that existing workstream to establish the send/action contract, then connect
+tabbyTally's tested outbox and signed review endpoint. Do not switch or overwrite
+meowGram's current checkout, guess a deployed API, or repeat the sample-review request.
+No meowGram files or live services changed during this inspection.
