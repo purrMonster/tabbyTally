@@ -3,7 +3,7 @@
 ## Latest status — 18 October 2026
 
 The dated historical results below are retained for traceability and superseded by
-RUNBOOK.md sections 16–22. The latest isolated suite passes **86 tests**, including
+RUNBOOK.md sections 16–26. The latest isolated suite passes **94 tests**, including
 candidate readiness, local corrections, repeat/stale/concurrent callback decisions,
 outbox retry/exhaustion/stale leases, atomic rollback and review-state backup/restore.
 Readiness is no longer universally blocked: the current offline corpus produces
@@ -13,8 +13,11 @@ have effective dates/accounts under the user-approved fallback policy. Zero of t
 
 Signed callback authentication is unit-tested; an actual meowGram authenticated
 round-trip has not been performed. Notification delivery is tested with injected
-senders, not a guessed provider API. A meowGram send/action interface was not found
-in the inspected local server routes. Production credentials/connectivity, actual
+senders and six consumer tests for the explicitly proposed
+[durable-send-v1 contract](MEOWGRAM.md). They cover receipt checks, failure handling,
+privacy, disabled configuration, HTTPS requirements and subprocess timeout wiring;
+they do not test provider idempotency or a live service. A meowGram send/action
+interface was not found in the inspected routes. Production credentials/connectivity, actual
 transport integration and sample-only live rollout remain open gates. No Actual
 Budget writes or mailbox changes occurred. See the private output map for individual
 model outputs and current deterministic/validation results.

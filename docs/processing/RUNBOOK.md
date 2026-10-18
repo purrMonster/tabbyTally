@@ -1738,3 +1738,56 @@ Use that existing workstream to establish the send/action contract, then connect
 tabbyTally's tested outbox and signed review endpoint. Do not switch or overwrite
 meowGram's current checkout, guess a deployed API, or repeat the sample-review request.
 No meowGram files or live services changed during this inspection.
+
+## 26. meowGram notification consumer — 18 October 2026
+
+User directed proceeding with the integration, then asked to resume after another
+usage-limit interruption. The interruption occurred before the Docker regression
+command could execute: automatic approval review was unavailable due to the usage
+limit, not because the action was judged unsafe. No test success was inferred from
+that rejected command. Resumed from the saved changes and clean prior commit.
+
+Read-only inspection of the message-API epic found no send route. The shared
+message-service delivery plan explicitly leaves HTTP routing and transactional
+idempotency to later tasks. Chosen implementation: a disabled-by-default consumer
+for a clearly labelled proposed `durable-send-v1` contract, with an explicit full
+HTTPS endpoint configured locally. Do not describe this as a verified provider or
+live end-to-end integration. Do not modify or switch meowGram's active checkout.
+
+Added `notify` / `notify --loop --interval 5`, wired to the existing fenced outbox.
+The worker validates configuration before claiming work. Each send uses its stable
+outbox UUID as the idempotency key, and acknowledges only a 200/201 durable receipt
+with the matching key. Redirects, queued acknowledgments, malformed receipts,
+timeouts and HTTP errors remain failed deliveries under the existing five-attempt
+retry policy. A subprocess enforces the total 20-second deadline inside the
+60-second lease. Credentials come from local files; the client requires HTTPS and
+never logs credentials, provider bodies or banking content. Message construction
+allowlists only the review ID, revision and state; raw email fields cannot leak
+through arbitrary extra payload keys.
+
+Added opt-in `compose.notify.yaml`, `.notify.env.example`, and Git/Docker ignores
+for the real `.notify.env`. No deployment, credential creation, live notifications,
+or changes to capture/unread flags were made. The five-second durable-queue worker
+does not recreate the cancelled daily 09:00 schedule.
+
+Detailed proposed provider contract, replay/restore acceptance checks, startup and
+stop commands, and signed callback bridge requirements are in
+[MEOWGRAM.md](MEOWGRAM.md). The existing local review commands remain usable now.
+meowGram buttons and the authenticated human-action bridge are not implemented by
+this increment. The provider must implement/verify the documented durable send
+contract before setting `MEOWGRAM_VERIFIED_CONTRACT=durable-send-v1` and provisioning
+approved bot credentials. This setting is an operator attestation, not a probe.
+
+Verification before interruption: six focused adapter tests passed. Full isolated
+PostgreSQL regression and packaging checks resumed after the usage limit reset;
+their results are recorded below when complete.
+
+Completed verification on 18 October: **94/94 tests passed** in the isolated Docker
+PostgreSQL suite (20.677 seconds), including six adapter tests and existing crash,
+lease, retry, permissions, callback concurrency and backup/restore checks. Built
+the production image successfully; its `notify --help` exposes loop/interval
+options. Running `notify` with no configuration exits 1 with only a generic
+configuration error before database/network access, as intended. Removed the
+disposable test containers/network. No new model evaluation was performed and no
+accuracy figures changed. Local adapter increment is complete; provider acceptance
+and the meowGram action bridge remain separate integration work.

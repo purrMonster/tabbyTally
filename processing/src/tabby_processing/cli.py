@@ -47,7 +47,7 @@ def main():
             command.add_argument('--reason', required=True)
         if name == 'retry':
             command.add_argument('--allowance', type=int, default=1)
-    for name, interval in (('discover',60),('work',1),('recover',30)):
+    for name, interval in (('discover',60),('work',1),('recover',30),('notify',5)):
         command = sub.add_parser(name)
         command.add_argument('--loop', action='store_true')
         command.add_argument('--interval', type=float, default=interval)
@@ -65,6 +65,9 @@ def main():
             model.config()
             print(json.dumps(model.call(action='models',timeout=30)))
             return 0
+        if args.command=='notify':
+            from . import meowgram, outbox
+            meowgram.config()  # Fail before claiming jobs if credentials/contract are absent.
         if hasattr(args, 'interval') and args.interval <= 0:
             raise ValueError('Interval must be positive')
         while not stop.is_set():
@@ -86,6 +89,8 @@ def main():
                         result=db.execute('SELECT r.*,c.facts,c.validation,e.reasons AS extraction_reasons,e.normalized_text FROM processing.reviews r LEFT JOIN processing.transaction_candidates c ON c.id=r.candidate_id JOIN processing.extraction_results e ON e.id=r.extraction_id WHERE r.id=%s',(args.id,)).fetchone()
                     elif args.command=='notifications':
                         result=db.execute('SELECT state,count(*) AS count,min(due_at) AS oldest FROM processing.notification_outbox GROUP BY state').fetchall()
+                    elif args.command=='notify':
+                        result=outbox.once(db,meowgram.send)
                     elif args.command=='reviews':
                         result=db.execute("SELECT id,candidate_id,extraction_id,revision,state FROM processing.reviews WHERE state='open' ORDER BY created_at LIMIT 100").fetchall()
                     elif args.command=='review-action':

@@ -3,6 +3,7 @@
 **/.env.*
 **/model.env
 **/.review.env
+**/.notify.env
 **/secrets
 **/backups
 **/exports

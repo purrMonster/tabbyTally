@@ -2,10 +2,11 @@
 
 Status as of 18 October 2026: 2.1 locally verified; 2.2 supports ready purchase
 candidates and explicit financial reviews. 2.3 local review/correction, signed API,
-receipts and outbox are implemented; meowGram transport/bridge remains pending its
-actual interface. Local 2.4 regression/restore acceptance passes, while live fleet
+receipts and outbox are implemented. A disabled meowGram consumer now implements
+the proposed [durable-send-v1 contract](MEOWGRAM.md); provider verification and the
+human-action bridge remain pending. Local 2.4 regression/restore acceptance passes, while live fleet
 deployment and authenticated meowGram round-trip remain pending. The latest suite
-has 86 passing tests. The 264-email offline corpus produces 108 ready purchases,
+has 94 passing tests. The 264-email offline corpus produces 108 ready purchases,
 55 financial reviews and zero template matches among 89 non-transaction messages;
 12 unreadable emails need source review. These are measured fixture outcomes, not
 universal accuracy. See RUNBOOK.md section 22 for exact remaining deployment gates.

@@ -5,7 +5,9 @@ Phase 2 produces candidates, never budget writes. As of 18 October, approved exa
 purchase templates can produce ready budgeting candidates without asserting bank
 settlement. Email-date and sole-bank-account fallbacks are explicit user-approved
 policies with provenance; see RUNBOOK.md sections 21–22. Local review/corrections and
-signed action API are implemented; meowGram transport remains pending its interface.
+signed action API are implemented. The disabled meowGram consumer follows the
+proposed [durable-send-v1 contract](MEOWGRAM.md); provider verification and the
+authenticated human-action bridge remain pending.
 
 ## Input preparation and provenance
 
