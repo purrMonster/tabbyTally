@@ -49,6 +49,8 @@ def main():
         if differences: comparisons.append({'id':r['id'],'differences':differences})
         r['relationships']=correlation.suggest(e,r['validation'][0]['account_id'],[c for c in candidates if c['id']!=r['id']])
     summary={'financial_events':len(candidates),'mapped':sum(bool(c['account_id']) for c in candidates),
+             'expectation_status':'unverified (model-generated)',
+             'user_checked_agreement':{'checked':0,'agreement':None,'status':'not measured'},
              'fields':{k:{'correct':correct[k],'total':v} for k,v in fields.items()},
              'differences_from_frozen_expectations':comparisons,
              'review_reasons':dict(Counter(reason for r in rows for v in r['validation'] for reason in v['reasons'])),
@@ -68,6 +70,9 @@ def main():
           +'</pre><h3>Validation with confirmed mappings</h3><pre>'+esc(json.dumps(r['validation'],indent=2))
           +'</pre><h3>Possible related emails (review required)</h3><pre>'+esc(json.dumps(r.get('relationships',[]),indent=2))+'</pre></details>')
     (out/'output-map.html').write_text('<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>Private email verification</title><style>body{font:16px system-ui;max-width:1100px;margin:30px auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f5f5;padding:16px}details{border-bottom:1px solid #ccc;padding:12px}summary{cursor:pointer}</style><h1>Private email verification — 264-email corpus</h1><p>Saved baseline model outputs, not a new model run. Valid JSON is reserialized from saved parsed output; original response whitespace was not retained. Missing/refused outputs are explicit. Deterministic results are shown separately. Bodies are visible text, without active HTML or attachments.</p>'+''.join(blocks),encoding='utf-8')
+    report=out/'output-map.html'
+    report.write_text(report.read_text(encoding='utf-8').replace('<h1>Private email verification',
+        '<p><b>Expectation status: unverified (model-generated).</b> Agreement with these labels is not user-checked accuracy. User-checked agreement: not measured. <a href="review-sample.html">Open the 25-row review sample</a>.</p><h1>Private email verification'),encoding='utf-8')
     print(json.dumps({'rows':len(rows),'template_matches':sum(bool(r['template_rule']) for r in rows),
         'negative_template_matches':sum(bool(r['template_rule']) and r['expected_classification']=='non_transaction' for r in rows),
         'financial_without_template':sum(not r['template_rule'] and r['expected_classification']=='transaction' for r in rows)}))

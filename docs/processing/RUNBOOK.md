@@ -1648,3 +1648,47 @@ outbox exhaustion and stale-token recovery, plus the existing crash/capture and
 combined backup/restore tests. Earlier interim test totals included duplicate test
 discovery; 86 is the final suite count. Real provider and fleet checks remain as
 listed above. No notification has been sent and no live pipeline activated.
+
+## 23. Resume under root AGENTS.md and user-checkable sample — 18 October 2026
+
+Read the root AGENTS.md, latest runbook entry and Git status before resuming. The
+working tree was clean at snapshot `77d93ff`. The user asked to pick up the next
+work item under those rules. Selected the independently actionable acceptance
+sample rather than repeating the unresolved meowGram interface question.
+
+Done when: a 25-email review sheet spans transaction and non-transaction types,
+shows source beside extracted fields, separates generated-label agreement from
+user-checked agreement, and the generator/documentation are committed.
+
+The user's new working rules are recorded here: define a pass/fail completion check
+before work; use confirmed contextual fallbacks; report problems with a chosen fix;
+reserve questions for consequential choices; stop repeated unchanged blockers;
+label assistant-generated expectations `unverified (model-generated)`; supply
+20–30 varied source/output rows for human checking; report format coverage,
+agreement with unverified labels and agreement with user-checked labels separately;
+commit working increments; preserve settled user facts and update this runbook.
+
+Implemented `processing/tests/build_review_sample.py`. It deterministically selects
+one example per 16 supported financial templates, eight varied negative scenarios
+(OTP, statement, offer, loan notice, reminder, application/operational messages),
+and one unreadable-input review: 25 unique source IDs. The private static HTML shows
+the full available visible body beside current extracted fields and labelled
+fallbacks, with saved model fields/JSON separately identified. It loads no external
+resources or active email content. User responses can refer to row numbers in chat;
+a private response JSON starts with no approvals and is not overwritten on reruns.
+Changing the selected sources while responses exist is rejected.
+
+Reproduce with `PYTHONPATH=processing/src;processing/tests` on Windows and:
+`python processing/tests/build_review_sample.py processing/exports/verification`.
+Run `export_verification.py` first if the underlying output map needs refreshing.
+Reports and response templates stay in ignored exports; only the generator and
+documentation are committed. No new model calls, production changes or notifications.
+
+Verification: 25 rows, 25 unique source IDs, all 16 template types, eight labelled
+non-transactions and one input-review case. Format coverage remains 163 matches
+among 264 total emails. Numeric field agreement remains in validation-summary.json,
+now explicitly labelled unverified. User-checked extraction agreement is not measured
+(zero rows checked); prior account/policy confirmations do not imply those rows were
+reviewed. Earlier runbook accuracy-like figures are agreement with assistant-created
+expectations unless explicitly identified as user-reviewed. This section corrects
+their interpretation without rewriting historical outputs or claiming new accuracy.
