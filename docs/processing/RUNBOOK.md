@@ -1791,3 +1791,55 @@ configuration error before database/network access, as intended. Removed the
 disposable test containers/network. No new model evaluation was performed and no
 accuracy figures changed. Local adapter increment is complete; provider acceptance
 and the meowGram action bridge remain separate integration work.
+
+## 27. Provider and authenticated bridge implementation — 18 October 2026
+
+User explicitly requested implementing and verifying meowGram's send endpoint and
+authenticated review-action bridge. Created an isolated meowGram worktree at
+`.worktrees/meowgram`, branch `feat/tabbytally-review-integration`, from refreshed
+`origin/main`; added that local worktree directory to tabbyTally's ignore rules.
+The original meowGram checkout remains unchanged. Locally integrated the existing
+bot-auth, bot-principals and shared-message-service branches. Preserved all runbook
+additions when resolving their append-only conflicts and retained `sender_kind`
+in shared-service broadcasts. No PR was merged or branch pushed.
+
+Implementation uses atomic PostgreSQL message/receipt insertion, indefinite replay
+receipts keyed by authenticated sender kind/ID and outbox UUID, and conflicts for
+changed text. Authentication is repeated on retries. The new bridge accepts only
+OIDC-authenticated, explicitly allowlisted human subjects; it derives and signs
+the actor server-side and never forwards caller-supplied identity or credentials.
+Credentials, live deployment and Authelia changes remain untouched. Verification
+and exact operating instructions are being recorded in the meowGram runbook too.
+
+Verification completed: meowGram Go race suite and vet passed; Flutter analysis,
+83 tests and release web build passed. Scratch backup/restore preserved nonempty
+message receipt counts and associations. Added `processing/compose.bridge.test.yaml`
+and a synthetic-only Python fixture server to exercise the actual callback API
+from the Go bridge. This passed first decision, repeat-safe replay, stale revision,
+conflicting action ID and exactly one persisted decision. The first cross-project
+assertion compared raw JSON bytes; JSONB key ordering made that assertion fail.
+Changed the test to compare decoded JSON and reran successfully. Production action
+semantics were unchanged. No new extraction/model evaluation was needed.
+
+The implemented provider contract and bridge settings now supersede the pending
+status in section 26. Live enablement still requires owner-approved deployment and
+local credentials; HTTP implementation does not add Flutter review buttons. Full
+connection and reproduction instructions are in [MEOWGRAM.md](MEOWGRAM.md).
+
+## 28. Final integration verification and commit — 19 October 2026
+
+User requested resuming after another usage-limit interruption. The limit had
+blocked automatic approval review before the last authentication check and commits
+could execute; no unsafe-action determination was made. Re-read both repositories'
+working rules, runbook entries and Git status; retained all saved implementation.
+The final meowGram handler race test passed, explicitly checking that a real Basic
+Authorization header cannot access the human-only review bridge. Earlier full Go
+race/vet, 83 Flutter tests/web build, backup/restore and real Go-to-Python callback
+checks already passed. No implementation was restarted and no live service or
+credential was changed. The finished code and reproduction instructions are saved
+as separate working commits in meowGram and tabbyTally.
+
+meowGram implementation commit: `cffda0d` on
+`feat/tabbytally-review-integration`, in `.worktrees/meowgram`. Removed both
+disposable test stacks and their test-only volumes after verification. The isolated
+meowGram worktree is clean; it is retained for review and eventual owner merge.

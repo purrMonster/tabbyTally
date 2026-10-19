@@ -1,6 +1,6 @@
-"""Opt-in client for the proposed meowGram durable-send-v1 contract.
+"""Opt-in client for the meowGram durable-send-v1 contract.
 
-This contract is not yet implemented by the inspected meowGram branch.
+Provider implementation is on feat/tabbytally-review-integration; verify deployment before enabling.
 The subprocess bounds the entire request, including DNS and slow responses.
 """
 import base64

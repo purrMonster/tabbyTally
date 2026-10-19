@@ -11,14 +11,16 @@ Readiness is no longer universally blocked: the current offline corpus produces
 have effective dates/accounts under the user-approved fallback policy. Zero of the
 89 labelled negatives match transaction templates. Twelve unreadable inputs need review.
 
-Signed callback authentication is unit-tested; an actual meowGram authenticated
-round-trip has not been performed. Notification delivery is tested with injected
-senders and six consumer tests for the explicitly proposed
+Signed callback authentication is unit-tested. The real Go bridge/Python receiver
+round-trip now passes in scratch containers, including replay, stale revisions,
+conflicting actions and one committed decision (RUNBOOK section 27). meowGram's
+separate HTTP integration suite checks OIDC identity and bot authentication.
+Notification delivery is tested with injected senders and six consumer tests for the
 [durable-send-v1 contract](MEOWGRAM.md). They cover receipt checks, failure handling,
 privacy, disabled configuration, HTTPS requirements and subprocess timeout wiring;
-they do not test provider idempotency or a live service. A meowGram send/action
-interface was not found in the inspected routes. Production credentials/connectivity, actual
-transport integration and sample-only live rollout remain open gates. No Actual
+they do not themselves establish provider idempotency. The meowGram integration
+branch now tests that guarantee with real PostgreSQL concurrency and backup/restore.
+Production credentials/connectivity and sample-only live rollout remain open gates. No Actual
 Budget writes or mailbox changes occurred. See the private output map for individual
 model outputs and current deterministic/validation results.
 

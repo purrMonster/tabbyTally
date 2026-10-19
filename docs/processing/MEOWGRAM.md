@@ -1,12 +1,13 @@
 # meowGram delivery and review connection
 
-18 October 2026. **Consumer implemented; provider contract proposed, not verified
-against a live meowGram API.** The inspected message-API epic has no HTTP send
-route. Its shared-service delivery plan explicitly defers HTTP and transactional
-idempotency. Do not enable this client against the WebSocket ticket or sync routes.
-No meowGram checkout, credentials or live services were changed.
+18 October 2026. **Consumer, provider endpoint and authenticated action bridge
+implemented and locally tested; not deployed.** Provider code is on meowGram branch
+`feat/tabbytally-review-integration` in the isolated `.worktrees/meowgram` checkout.
+It integrates the existing bot-auth, bot-principals and shared-service branches.
+The original checkout, credentials and live services remain untouched. Do not
+enable this client against the WebSocket ticket or sync routes.
 
-## Proposed durable-send-v1 provider contract
+## Implemented durable-send-v1 provider contract
 
 The endpoint is configured as a complete HTTPS URL; no route is assumed. Authenticate
 with a dedicated bot service account using HTTP Basic over verified TLS. The bot
@@ -43,8 +44,10 @@ enforces the whole 20-second delivery deadline, below the 60-second claim lease.
 
 ## Enable only after provider acceptance
 
-1. Implement the above contract in the existing meowGram message-API workstream.
-   Verify the deployed route, bot authorization and destination restrictions.
+1. Review and deploy the meowGram integration branch and its dependencies with
+   owner approval. Set `MESSAGE_SEND_ENDPOINT` to the desired API path. Messages
+   go to the existing shared lounge; only generic review notifications belong here.
+   Verify the deployed route and bot authorization.
 2. Run synthetic requests: first send, identical replay, concurrent replay,
    conflicting text, wrong credentials, timeout after commit, provider restart,
    and replay after restoring processing state. Count stored messages: exactly one
@@ -75,17 +78,21 @@ is not the cancelled daily 09:00 scheduler. Configuration errors fail before any
 claim. Logs expose only outcomes/error classes. Neither live credentials nor a
 working provider URL are checked in.
 
-## Review actions: existing receiver, pending meowGram bridge
+## Review actions: receiver and implemented meowGram bridge
 
 Notifications currently direct the operator to the private processing console.
 Use `reviews`, `review-show <UUID>` and `review-action --file <private-json>` today.
 Recipient/sender remain available in the private verification report. Do not turn
 notification text into an executable approval command.
 
-For future in-app actions, the bridge must authenticate the actual human through
-meowGram, allowlist that stable actor, and bind a deliberate action to the displayed
-review UUID/revision. The bot's send credential does not authorize human decisions.
-No in-app buttons or bridge are claimed as implemented here.
+The bridge authenticates the human through existing meowGram OIDC middleware and
+allowlists their stable subject. Set `REVIEW_ACTION_ENDPOINT`, `REVIEW_CALLBACK_URL`
+(HTTPS), `REVIEW_SIGNING_KEY_FILE` and `REVIEW_ALLOWED_SUBJECTS` in meowGram; the
+same subjects must appear in processing's `REVIEW_ALLOWED_ACTORS`. Both services
+read the same local signing key with surrounding whitespace trimmed. The bot's
+send credential cannot authorize decisions. Client actions must bind the displayed
+review UUID/revision and reuse the action ID on retries. Flutter buttons are not
+part of this HTTP bridge increment.
 
 The existing receiver is POST `/review/actions`. Send the exact JSON bytes with
 `action_id` (stable across retries), `review_id`, integer `revision`, `action`
@@ -107,3 +114,22 @@ timestamp/signature if needed. 200 returns a committed result; 403 means fix aut
 a newer revision; 503 permits retry. Test forged actor/signature, expired timestamp,
 replay, conflicting action ID and concurrent/stale corrections before enabling
 in-app actions. Decisions and updated notifications commit atomically.
+
+## Reproduce the cross-project acceptance test
+
+From the tabbyTally root, point at the integration branch's server checkout:
+
+```powershell
+$env:MEOWGRAM_SERVER_PATH = (Resolve-Path '.worktrees/meowgram/server').Path
+docker compose -f processing/compose.bridge.test.yaml up --build --abort-on-container-exit --exit-code-from bridge-test --attach bridge-test
+docker compose -f processing/compose.bridge.test.yaml down --volumes
+```
+
+This uses synthetic data, a disposable PostgreSQL database and the actual Python
+review API. A temporary TLS proxy exercises the Go bridge's signed HTTPS request.
+It checks first decision, identical replay, stale revision, conflicting action ID
+and exactly one committed decision. The separate meowGram Go suite tests real OIDC
+JWT verification, the bot gate, durable send receipts/concurrency, publication
+failure, actor spoofing and provider errors. LDAP authentication is emulated in the
+route integration test; existing directory tests cover that component separately.
+No live directory or account credentials are used.
