@@ -5,6 +5,7 @@
 **/model.env
 **/.review.env
 **/.notify.env
+**/integration.host.env
 **/secrets
 **/backups
 **/exports

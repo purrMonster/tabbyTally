@@ -6,6 +6,7 @@ secrets/
 model.env
 .review.env
 .notify.env
+integration.host.env
 .worktrees/
 compose.override.yaml
 compose.override.yml

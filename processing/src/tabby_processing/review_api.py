@@ -39,7 +39,12 @@ def serve(stop=None):
                 actor=authenticate(self.headers,body,key)
                 if actor not in allowed: raise ValueError()
                 now=time.monotonic()
-                if now-last.get(actor,0)<0.1: raise ValueError('Rate limited')
+                if now-last.get(actor,0)<0.1:
+                    self.send_response(429)
+                    self.send_header('Retry-After','1')
+                    self.send_header('Content-Length','0')
+                    self.end_headers()
+                    return
                 last[actor]=now
             except (ValueError,TimeoutError):
                 self.send_error(403); return

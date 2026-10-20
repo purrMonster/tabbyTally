@@ -1843,3 +1843,46 @@ meowGram implementation commit: `cffda0d` on
 `feat/tabbytally-review-integration`, in `.worktrees/meowgram`. Removed both
 disposable test stacks and their test-only volumes after verification. The isolated
 meowGram worktree is clean; it is retained for review and eventual owner merge.
+
+## 29. Integration review and explicit deployment hold — 21 October 2026
+
+User first requested review and deployment/credential preparation. During review,
+identified startup route collision handling and callback throttling status as fixes
+to complete before deployment. The user then explicitly held deployment configuration
+and clarified R2's message API/pourOver polling scope. The optional tabbyTally review
+callback is additional scope, not a requirement for that polling design. No PR is
+open and no new R2 story ID was assigned. Explained that the IMAP capture receiver
+and signed processing review API are different services; the earlier use of
+“receiver” was ambiguous. A polling-only topology does not require an inbound review
+callback hostname.
+
+The current subject allowlist authorizes financial review decisions, not Actual
+writes; subjects also identify individual audit actors. Verified group/role-based
+authorization is possible but requires an explicit policy and implementation on
+both sides, and is not already provided by the current bridge. No identity is
+chosen until the user resolves this decision.
+
+User instruction: placeholders only (RECEIVER_HOST=,
+CALLBACK_HOST=receiver.example.home.arpa, OWNER_OIDC_SUB=); real configuration must
+come from an ignored host-local env file. Do not deploy, change DNS or touch live
+services until the user answers. Prepared processing/deployment/.env.example and
+ignored integration.host.env in Git and Docker context. Credential creation and
+configuration are held too. Details and review findings are in INTEGRATION_REVIEW.md.
+
+## 30. Polling bot decision; integration parked — 21 October 2026
+
+User settled the architecture: no inbound callback. tabbyTally runs as a meowGram
+bot like pourOver: post review prompts, poll sync replies, apply actions locally,
+using R2 bot Basic auth. No new hostname or exposed service. LLDAP reviewer group
+membership is the authorization policy; individual subjects remain audit actors
+only. Chat is references-only (item IDs/counts); amounts and merchants stay local
+to tabbyTally. This supersedes the callback and subject-allowlist design in prior
+entries. Those historical implementations/tests do not certify the new design.
+
+User requested only a short design note on feat/tabbytally-review-integration and
+a green, parked branch with Where we stopped. Added
+docs/releases/release-2/tabbytally-review-design.md in the meowGram worktree.
+Do not build further integration until BOTH UST-2.4.2 and UST-2.4.3 are merged into
+release/r2. No deployment, credentials, DNS or live-service changes. The just-finished
+review checks passed (95 processing tests, Go config/handler race tests). No new
+integration code will be added while parked. Keep placeholders only.

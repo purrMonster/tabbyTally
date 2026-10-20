@@ -1,5 +1,17 @@
 # meowGram delivery and review connection
 
+**PARKED — superseded design:** the user chose a polling bot with R2 Basic auth,
+LLDAP reviewer-group authorization and references-only chat. No inbound callback.
+Do not deploy the prototype below. Wait for UST-2.4.2 and UST-2.4.3 to merge into
+release/r2 before further integration work. See RUNBOOK §30 and the meowGram branch's
+`docs/releases/release-2/tabbytally-review-design.md`.
+
+**21 October deployment hold:** the user is deciding whether the extra push-review
+bridge fits the R2/pourOver polling scope and whether authorization should use a
+group/role. Do not execute the deployment steps below until that decision is made.
+Use only the placeholder inventory in `processing/deployment/.env.example` for now;
+see [integration review](INTEGRATION_REVIEW.md).
+
 18 October 2026. **Consumer, provider endpoint and authenticated action bridge
 implemented and locally tested; not deployed.** Provider code is on meowGram branch
 `feat/tabbytally-review-integration` in the isolated `.worktrees/meowgram` checkout.
@@ -110,7 +122,7 @@ TLS reverse proxy or private tunnel configured separately.
 The receiver checks a five-minute timestamp window, actor allowlist, payload size
 and action receipts. On a timeout retry the identical body/action ID, with a fresh
 timestamp/signature if needed. 200 returns a committed result; 403 means fix auth;
-409 means stale/conflicting/invalid action: refresh the review, never auto-approve
+429 includes Retry-After and means retry later. 409 means stale/conflicting/invalid action: refresh the review, never auto-approve
 a newer revision; 503 permits retry. Test forged actor/signature, expired timestamp,
 replay, conflicting action ID and concurrent/stale corrections before enabling
 in-app actions. Decisions and updated notifications commit atomically.

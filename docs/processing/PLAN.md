@@ -7,7 +7,9 @@ the [durable-send-v1 contract](MEOWGRAM.md); the meowGram provider and human-act
 bridge are implemented and locally verified on its integration branch. Local 2.4
 regression/restore acceptance passes, while live fleet
 deployment and authenticated meowGram round-trip remain pending. The latest suite
-has 94 passing tests. The 264-email offline corpus produces 108 ready purchases,
+has 95 passing tests (21 October). Deployment is explicitly on hold pending the
+scope/authorization decision recorded in RUNBOOK section 29.
+The 264-email offline corpus produces 108 ready purchases,
 55 financial reviews and zero template matches among 89 non-transaction messages;
 12 unreadable emails need source review. These are measured fixture outcomes, not
 universal accuracy. See RUNBOOK.md section 22 for exact remaining deployment gates.

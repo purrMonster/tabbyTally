@@ -3,7 +3,7 @@
 ## Latest status — 18 October 2026
 
 The dated historical results below are retained for traceability and superseded by
-RUNBOOK.md sections 16–26. The latest isolated suite passes **94 tests**, including
+RUNBOOK.md sections 16–29. The latest isolated suite passes **95 tests** (21 October), including
 candidate readiness, local corrections, repeat/stale/concurrent callback decisions,
 outbox retry/exhaustion/stale leases, atomic rollback and review-state backup/restore.
 Readiness is no longer universally blocked: the current offline corpus produces

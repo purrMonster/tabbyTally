@@ -13,6 +13,39 @@ from tabby_processing import review, review_api, outbox, extraction
 
 
 class CallbackTests(unittest.TestCase):
+    def test_throttle_is_retryable_without_reapplying_decision(self):
+        import http.client
+        import threading
+        from http.server import HTTPServer
+        started=threading.Event(); stop=threading.Event(); servers=[]
+        def server_factory(address, handler):
+            server=HTTPServer(('127.0.0.1',0),handler)
+            servers.append(server); started.set(); return server
+        with tempfile.TemporaryDirectory() as root:
+            key=Path(root)/'key'; key.write_bytes(b'x'*32)
+            with patch.dict(os.environ,REVIEW_SIGNING_KEY_FILE=str(key),REVIEW_ALLOWED_ACTORS='owner'), \
+                 patch.object(review_api,'HTTPServer',side_effect=server_factory), \
+                 patch.object(review_api.time,'monotonic',return_value=100), \
+                 patch.object(review_api,'connect'), \
+                 patch.object(review_api.review,'decide',return_value={'ok':True}) as decide:
+                thread=threading.Thread(target=review_api.serve,args=(stop,)); thread.start()
+                try:
+                    self.assertTrue(started.wait(5))
+                    body=b'{}'; stamp=str(int(review_api.time.time()))
+                    signature=hmac.new(b'x'*32,stamp.encode()+b'\nowner\n'+body,hashlib.sha256).hexdigest()
+                    for expected in (200,429):
+                        client=http.client.HTTPConnection('127.0.0.1',servers[0].server_port,timeout=5)
+                        try:
+                            client.request('POST','/review/actions',body,{'X-Review-Timestamp':stamp,'X-Review-Actor':'owner','X-Review-Signature':signature})
+                            response=client.getresponse(); response.read()
+                            self.assertEqual(response.status,expected)
+                            if expected==429: self.assertEqual(response.getheader('Retry-After'),'1')
+                        finally: client.close()
+                    decide.assert_called_once()
+                finally:
+                    stop.set(); thread.join(5)
+                    self.assertFalse(thread.is_alive())
+
     def test_authentication_actor_timestamp_and_signature(self):
         body=b'{}'; key=b'x'*32
         headers={'X-Review-Timestamp':'1000','X-Review-Actor':'owner'}
