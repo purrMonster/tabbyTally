@@ -1898,3 +1898,17 @@ completed-work evidence, planned acceptance checks and the unchanged parking gat
 Updated cross-project references and removed the old release-folder copy. No code,
 configuration values or integration behavior changed; no test rerun was required
 for this documentation-only reorganization. Link/path checks are the verification.
+
+## 32. pourOver requirements added to sister-project register — 21 October 2026
+
+User requested adding pourOver's requests to the same meowGram folder. Added
+pourover-message-api.md under docs/requirements-from-sister-projects in the isolated
+meowGram worktree, and updated its README and runbook. The document records the
+source dates, requirements, consumer/provider responsibilities, reported completed
+work, pending acceptance checks and Where we stopped. It includes Basic polling,
+sender identity, composite cursors, prefixed reply idempotency keys, stable bot
+usernames and backoff. Dedicated channels remain R2.1 proposal-only; R2 is lounge
+API delivery. The original external requirements artifact was not independently
+inspected; the new PO IDs identify a synthesis of available local project records.
+No integration or deployment resumed. Tests were not rerun for documentation-only
+changes; relative-link and whitespace checks verify this increment.
