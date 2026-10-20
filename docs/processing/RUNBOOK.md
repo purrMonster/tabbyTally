@@ -1881,8 +1881,20 @@ entries. Those historical implementations/tests do not certify the new design.
 
 User requested only a short design note on feat/tabbytally-review-integration and
 a green, parked branch with Where we stopped. Added
-docs/releases/release-2/tabbytally-review-design.md in the meowGram worktree.
+docs/requirements-from-sister-projects/tabbytally-review-bot.md in the meowGram worktree.
 Do not build further integration until BOTH UST-2.4.2 and UST-2.4.3 are merged into
 release/r2. No deployment, credentials, DNS or live-service changes. The just-finished
 review checks passed (95 processing tests, Go config/handler race tests). No new
 integration code will be added while parked. Keep placeholders only.
+
+## 31. Sister-project requirements handoff — 21 October 2026
+
+User requested moving the meowGram-hosted tabbyTally document into a dedicated
+“requirements from sister projects” folder, structured to explain requirements
+from the other project, work completed and the corresponding plan. Chosen path:
+docs/requirements-from-sister-projects/tabbytally-review-bot.md in meowGram, with a
+README requirements register. Added stable requirement IDs, responsibility split,
+completed-work evidence, planned acceptance checks and the unchanged parking gate.
+Updated cross-project references and removed the old release-folder copy. No code,
+configuration values or integration behavior changed; no test rerun was required
+for this documentation-only reorganization. Link/path checks are the verification.

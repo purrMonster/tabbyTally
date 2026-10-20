@@ -4,7 +4,7 @@
 LLDAP reviewer-group authorization and references-only chat. No inbound callback.
 Do not deploy the prototype below. Wait for UST-2.4.2 and UST-2.4.3 to merge into
 release/r2 before further integration work. See RUNBOOK §30 and the meowGram branch's
-`docs/releases/release-2/tabbytally-review-design.md`.
+`docs/requirements-from-sister-projects/tabbytally-review-bot.md`.
 
 **21 October deployment hold:** the user is deciding whether the extra push-review
 bridge fits the R2/pourOver polling scope and whether authorization should use a
