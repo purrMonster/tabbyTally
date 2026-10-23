@@ -1,0 +1,31 @@
+services:
+  worker:
+    build:
+      context: ..
+      dockerfile: processing/Dockerfile
+    command: [work, --loop]
+    env_file: .env
+    secrets: [processing_db_password]
+    networks: [receiver]
+    restart: unless-stopped
+    stop_grace_period: 130s
+    mem_limit: 256m
+    cpus: 0.5
+    healthcheck:
+      test: [CMD, tabby-processing, health]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+  discovery:
+    extends: worker
+    command: [discover, --loop]
+  recovery:
+    extends: worker
+    command: [recover, --loop]
+networks:
+  receiver:
+    external: true
+    name: ${RECEIVER_NETWORK:?Set the existing receiver Docker network name}
+secrets:
+  processing_db_password:
+    file: ./secrets/processing_db_password.txt

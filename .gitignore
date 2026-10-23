@@ -1,0 +1,32 @@
+# Local credentials and deployment overrides
+.env
+.env.*
+!.env.example
+secrets/
+model.env
+.review.env
+.notify.env
+integration.host.env
+.worktrees/
+compose.override.yaml
+compose.override.yml
+*.pem
+*.key
+
+# Private mailbox data and database archives
+backups/
+exports/
+*.eml
+*.mbox
+*.dump
+*.backup
+!Dockerfile.backup
+*.sql.gz
+*.log
+
+# Generated dependencies and caches
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/

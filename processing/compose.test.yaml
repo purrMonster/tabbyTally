@@ -1,0 +1,27 @@
+name: tabbytally-processing-test
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_PASSWORD: disposable-test-only
+      POSTGRES_DB: processing_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U postgres -d processing_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  tests:
+    build:
+      context: ..
+      dockerfile: processing/Dockerfile.test
+    environment:
+      PGHOST: db
+      PGUSER: postgres
+      PGPASSWORD: disposable-test-only
+      PGDATABASE: processing_test
+      RUN_PROCESSING_TESTS: "1"
+    depends_on:
+      db:
+        condition: service_healthy

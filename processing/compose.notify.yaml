@@ -1,0 +1,21 @@
+# Opt-in after provider contract verification; combine with compose.yaml.
+services:
+  notifier:
+    build:
+      context: ..
+      dockerfile: processing/Dockerfile
+    command: [notify, --loop]
+    env_file: .notify.env
+    secrets: [review_db_password, meowgram_username, meowgram_password]
+    networks: [receiver]
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 256m
+    cpus: 0.5
+secrets:
+  review_db_password:
+    file: ./secrets/review_db_password.txt
+  meowgram_username:
+    file: ./secrets/meowgram_username.txt
+  meowgram_password:
+    file: ./secrets/meowgram_password.txt

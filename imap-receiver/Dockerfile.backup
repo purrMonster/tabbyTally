@@ -1,0 +1,12 @@
+FROM postgres:17-bookworm
+
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-psycopg \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+COPY src ./src
+COPY migrations ./migrations
+COPY tests ./tests
+USER postgres
+ENTRYPOINT ["python3", "-m", "src.backup"]
+CMD ["--help"]
