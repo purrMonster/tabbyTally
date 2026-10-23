@@ -1939,3 +1939,28 @@ https://github.com/purrMonster/meowGram/pull/41,
 https://github.com/purrMonster/meowGram/pull/43,
 https://github.com/purrMonster/meowGram/pull/49 and
 https://github.com/purrMonster/meowGram/actions/runs/39834547253.
+
+## 34. Publication authorization and project-card answers — 23 October 2026
+
+The user authorized publishing the nine local Phase 2 commits after `77d93ff`
+through `e0579d4` for review. Preserve their history and publish the existing
+`tabbytally/phase-2-wip` branch; open a pull request without merging. The project
+card remains a separate documentation PR against main.
+
+The user confirmed that the receiver is still running and that imports will be
+started manually later. This is owner-confirmed operating status, not a new health
+probe. Interpretation: close the card's operational-status question and leave
+manual import initiation to the owner; no live-service stop/start is performed.
+Backup scheduling and off-host restore completion were not confirmed by this
+answer and are not recorded as passed. They remain future rollout checks, not an
+outstanding question for this card handoff.
+
+The user also confirmed that no published tabbyTally image or release exists
+outside the inspected Git refs and documentation. The three project-card questions
+are therefore settled. Update the card with remote decision links after publication.
+The proposed AGENTS.md session-update rule remains a separate, unapplied proposal.
+
+A usage-limit interruption occurred before publication or these documentation
+changes. Resumption rechecked Git status and the latest runbook entry; the nine
+commits remained intact and the working tree was clean. This publication task
+adds documentation only; existing test results retain their original dates.
