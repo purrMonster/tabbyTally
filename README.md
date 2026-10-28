@@ -4,9 +4,9 @@
 
 TabbyTally is a self-hosted project for turning bank transaction emails into [Actual Budget](https://actualbudget.org/) entries using a local language model. Monthly statements provide a second layer of verification, helping identify missing transactions, duplicates and differences between alerts and posted activity.
 
-The project starts with [n8n](https://n8n.io/) workflows and evolves incrementally into a Python application, keeping each working capability usable during the transition.
+The project uses Python for email capture and planned downstream processing, with PostgreSQL holding durable state. The [Phase 2 processing plan](docs/processing/README.md) covers the path from captured emails to validated candidates and review; Actual Budget writes follow in Phase 3.
 
-> **Status: planning and initial development.** The implementation roadmap is defined. The features below describe the intended system; bank integrations, deployable services and installation commands are not yet available. TabbyTally is the working project name.
+> **Status: early development.** The [Python IMAP receiver](imap-receiver/README.md) captures new emails into PostgreSQL and has been verified with one live inbox. Snapshot backup, disposable restore verification, and versioned schema migrations are implemented for the receiver. Account registration and secret provisioning remain manual. The [processing service](processing/README.md) implements Phase 2.1 durable jobs, retries, crash recovery and combined backups. Phase 2.2 has a review-only extraction pilot verified with synthetic tests; real-model and bank-format acceptance remain pending. Processing has not been deployed live. Review callbacks and Actual Budget writes are not implemented. See the [verification record](docs/processing/VERIFICATION.md). The sprint roadmap below is an earlier proposal superseded for Phase 2 by the [processing plan](docs/processing/PLAN.md). Receiver verification is in the [runbook](imap-receiver/runbook.md). The `imap-listener/` directory is a historical JavaScript prototype.
 
 ## Why this project exists
 
@@ -95,20 +95,20 @@ The initial scope is one user, one Actual budget and INR accounting. Foreign-cur
 
 | Component | Responsibility |
 |---|---|
-| n8n | Initial intake, extraction orchestration and review workflows |
+| Python processing node | Durable job orchestration, extraction, validation and review |
 | Ollama | Local email interpretation into structured events |
 | PostgreSQL | Messages, events, jobs, identities and reconciliation history |
-| Python | Gradually owns validation, reconciliation, review and ingestion |
+| Python IMAP receiver | Independent email capture and mailbox recovery |
 | Node.js bridge | Accesses Actual through the official `@actual-app/api` client |
 | Actual Budget | Budgeting interface and financial transaction records |
 
-Durable state lives outside n8n execution history. Versioned contracts and stable event identifiers allow individual components to move into Python without recreating financial transactions.
+Durable state lives in PostgreSQL. Versioned contracts and stable event identifiers support retries and controlled reprocessing without recreating financial transactions.
 
 The Node.js bridge remains part of the intended architecture. Python migration does not require reimplementing Actual's synchronization protocol.
 
 ## Incremental roadmap
 
-Every sprint should deliver a usable improvement. Later scope will be refined using feedback from the working system.
+This is the historical sprint proposal, including the former n8n migration sequence. Use the [Python processing milestones](docs/processing/PLAN.md) for current Phase 2 work. Later scope will be refined using feedback from the working system.
 
 | Sprint | Usable outcome |
 |---|---|
@@ -131,11 +131,14 @@ Sprint numbers describe the proposed sequence, not promised release dates.
 
 ## Getting started
 
+For Phase 2.1 testing, deployment prerequisites, backup recovery and implementation
+history, see the [processing runbook](docs/processing/RUNBOOK.md).
+
 There is no runnable application release yet. The first development milestone is a preview-only workflow for HDFC savings.
 
 To prepare:
 
-1. Record the versions and deployment details of your existing n8n and Actual instances.
+1. Follow the [processing plan](docs/processing/PLAN.md), starting with database schema, backup coverage and fake-worker recovery tests.
 2. Create a dedicated mailbox with IMAP access.
 3. Gather representative bank alerts and a statement for local testing.
 4. Redact any samples that will enter version control.

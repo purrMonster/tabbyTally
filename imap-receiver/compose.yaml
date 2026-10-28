@@ -1,0 +1,78 @@
+﻿services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  receiver:
+    build: .
+    command: ["observe"]
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: imap_receiver_runtime
+      PGPASSWORD_FILE: /run/secrets/receiver_db_password
+      BANKING_IMAP_PASSWORD_FILE: /run/secrets/banking_imap_password
+      MAX_MAILBOX_WORKERS: "8"
+      RECONCILE_SECONDS: "60"
+    secrets:
+      - banking_imap_password
+      - receiver_db_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "python", "-m", "src.health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+  backup:
+    profiles: ["maintenance"]
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    restart: "no"
+  admin:
+    profiles: ["maintenance"]
+    build: .
+    entrypoint: ["python", "-m", "src.admin"]
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      RUNTIME_PASSWORD_FILE: /run/secrets/receiver_db_password
+    secrets:
+      - receiver_db_password
+    restart: "no"
+
+volumes:
+  postgres-data:
+
+secrets:
+  receiver_db_password:
+    file: ./secrets/receiver_db_password.txt
+  banking_imap_password:
+    file: ./secrets/banking_imap_password.txt

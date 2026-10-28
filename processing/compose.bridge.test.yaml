@@ -1,0 +1,47 @@
+name: tabbytally-meowgram-bridge-test
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_PASSWORD: disposable-test-only
+      POSTGRES_DB: processing_test
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U postgres -d processing_test"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+  callback:
+    build:
+      context: ..
+      dockerfile: processing/Dockerfile.test
+    entrypoint: [python, /app/processing/tests/bridge_fixture.py]
+    environment:
+      PGHOST: db
+      PGUSER: postgres
+      PGPASSWORD: disposable-test-only
+      PGDATABASE: processing_test
+      RUN_PROCESSING_TESTS: "1"
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8092',timeout=2)"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+  bridge-test:
+    image: golang:1.27.1
+    working_dir: /src
+    volumes:
+      - ${MEOWGRAM_SERVER_PATH:?Set isolated meowGram server directory}:/src:ro
+      - go-mod:/go/pkg/mod
+      - go-build:/root/.cache/go-build
+    environment:
+      PROCESSING_BRIDGE_TEST_URL: http://callback:8091
+      PROCESSING_BRIDGE_FIXTURE_URL: http://callback:8092
+    command: [go, test, -race, -count=1, -run, TestProcessingBridgeRoundTrip, -v, ./internal/handler]
+    depends_on:
+      callback: {condition: service_healthy}
+volumes:
+  go-mod:
+  go-build:

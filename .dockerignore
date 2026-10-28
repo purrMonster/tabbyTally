@@ -1,0 +1,16 @@
+.git
+.worktrees
+**/.env
+**/.env.*
+**/model.env
+**/.review.env
+**/.notify.env
+**/integration.host.env
+**/secrets
+**/backups
+**/exports
+**/.venv
+**/__pycache__
+**/*.eml
+**/*.dump
+**/*.log

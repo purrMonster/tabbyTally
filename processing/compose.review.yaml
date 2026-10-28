@@ -1,0 +1,24 @@
+# Explicit opt-in; configure a separate reviewer login and signing secret locally.
+services:
+  review-api:
+    build:
+      context: ..
+      dockerfile: processing/Dockerfile
+    command: [review-api]
+    env_file: .review.env
+    environment:
+      REVIEW_BIND: 0.0.0.0
+      REVIEW_PORT: "8091"
+      REVIEW_SIGNING_KEY_FILE: /run/secrets/review_signing_key
+    secrets: [review_signing_key, review_db_password]
+    ports: ["127.0.0.1:${REVIEW_HOST_PORT:-8091}:8091"]
+    networks: [receiver]
+    restart: unless-stopped
+    stop_grace_period: 15s
+    mem_limit: 256m
+    cpus: 0.5
+secrets:
+  review_signing_key:
+    file: ./secrets/review_signing_key.txt
+  review_db_password:
+    file: ./secrets/review_db_password.txt
