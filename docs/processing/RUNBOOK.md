@@ -1964,3 +1964,20 @@ A usage-limit interruption occurred before publication or these documentation
 changes. Resumption rechecked Git status and the latest runbook entry; the nine
 commits remained intact and the working tree was clean. This publication task
 adds documentation only; existing test results retain their original dates.
+
+## 35. Phase 2 merged to main; frozen for the move — 28 October 2026
+
+The owner merged PR #2 (`tabbytally/phase-2-wip` → `main`) on 28 October 2026 at
+17:54 IST. `main` now holds the IMAP receiver, Phase 2.1 processing and the
+Phase 2.2 review-only extraction pilot. Nothing was deployed or activated by the
+merge: the live receiver keeps running as confirmed in section 34, with no
+processing activation, notifications or Actual Budget writes.
+
+Freeze (owner's instruction, recorded by Claude): from 28 October 2026 no new
+tabbyTally work until after the 1 November house move; afterwards purrBrews work is
+weekly only. The branches `codex/imap-receiver-foundation`, `docs/project-card`
+and `tabbytally/phase-2-wip` are fully merged and can be deleted by the owner.
+
+**Where we stopped / next step:** Phase 2.2 real-model and bank-format acceptance
+(section 13), then the deployment and backup gates in section 8 before any live
+activation.
